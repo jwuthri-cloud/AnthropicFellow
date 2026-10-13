@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+runs/
+outputs/
+.env
+*.pt
+*.safetensors
+.claude/settings.local.json

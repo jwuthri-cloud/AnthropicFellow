@@ -1,0 +1,46 @@
+# Agents that can be seated in a room. Read by agentroom (MCP server and CLI).
+#
+# kind:    claude    -> Claude Code CLI on your subscription (`claude -p`)
+#          codex     -> Codex CLI on your subscription (`codex exec`)
+#          deepagent -> deepagents harness on an API model, paid per token (needs OPENROUTER_API_KEY)
+# effort:  reasoning effort passed to the CLI (claude: low..max; codex: low..max)
+#
+# Every agent gets read-only access to `workdir` (relative to this file) and no access to rooms.
+
+workdir = ".."
+
+[agents.astra]
+kind = "codex"
+model = "gpt-6-astra"
+effort = "high"
+
+[agents.sol]
+kind = "codex"
+model = "gpt-6.1-sol"
+effort = "high"
+
+[agents.opus]
+kind = "claude"
+model = "opus"
+effort = "high"
+
+[agents.fable]
+kind = "claude"
+model = "fable"
+effort = "high"
+
+[agents.sonnet]
+kind = "claude"
+model = "sonnet"
+effort = "high"
+
+[agents.haiku]
+kind = "claude"
+model = "haiku"
+effort = "low"
+
+# Third model family through OpenRouter. Paid per token: seat it only when a non-OpenAI,
+# non-Anthropic view is worth the cost.
+[agents.deepseek]
+kind = "deepagent"
+model = "openrouter:deepseek/deepseek-v4-flash"

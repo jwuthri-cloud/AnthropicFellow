@@ -1,0 +1,252 @@
+import { test, after } from "node:test";
+import assert from "node:assert/strict";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  symlinkSync,
+  rmSync,
+  statSync,
+} from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+const temp = mkdtempSync(path.join(os.tmpdir(), "parallax-store-test-"));
+const research = path.join(temp, "research");
+mkdirSync(path.join(research, "docs", "journal"), { recursive: true });
+process.env.PARALLAX_DATA_DIR = path.join(temp, "private-data");
+process.env.PARALLAX_RESEARCH_ROOT = research;
+const store = await import("../lib/store");
+const importer = await import("../lib/importer");
+after(() => {
+  store.closeDatabases();
+  rmSync(temp, { recursive: true, force: true });
+});
+
+test("revisions survive edits; stale writers cannot overwrite a record", () => {
+  const original = store.createRecord({
+    kind: "experiment",
+    title: "Fixture: baseline",
+    provenance: {
+      seed: 42,
+      commit: "fixture-commit",
+      config: "batch_size = 2",
+    },
+  });
+  const revised = store.updateRecord(
+    original.id,
+    { ...original, title: "Fixture: baseline revised" },
+    1,
+  );
+  assert.equal(revised.revision, 2);
+  assert.equal(store.getRevisions(original.id)[1].title, original.title);
+  assert.throws(
+    () => store.updateRecord(original.id, original, 1),
+    /changed elsewhere/,
+  );
+  assert.equal(store.getRecord(original.id).title, revised.title);
+  assert.equal(store.getRecord(original.id).provenance.seed, 42);
+});
+test("journal content is immutable while pinning preserves historical text", () => {
+  const journal = store.createRecord({
+    kind: "journal",
+    title: "Fixture: journal",
+    content: "Original observation.",
+  });
+  assert.throws(
+    () =>
+      store.updateRecord(journal.id, { ...journal, content: "Rewritten" }, 1),
+    /immutable/,
+  );
+  const pinned = store.togglePin(journal.id, 1);
+  assert.equal(pinned.content, journal.content);
+  assert.equal(pinned.pinned, true);
+  assert.equal(store.getRevisions(journal.id).length, 2);
+});
+test("invalid measurements and duplicate metric steps are rejected atomically", () => {
+  const run = store.createRecord({
+    kind: "experiment",
+    title: "Fixture: metrics",
+  });
+  assert.throws(
+    () =>
+      store.appendMetrics(run.id, [
+        { name: "test", step: 0, value: 1, lower: 2, upper: 1 },
+      ]),
+    /Lower bound/,
+  );
+  store.appendMetrics(run.id, [
+    { name: "fixture_only", step: 0, value: 0.5, n: 2, lower: 0.1, upper: 0.9 },
+  ]);
+  assert.throws(
+    () =>
+      store.appendMetrics(run.id, [
+        { name: "fixture_only", step: 1, value: 0.6 },
+        { name: "fixture_only", step: 0, value: 0.7 },
+      ]),
+    /already exists/,
+  );
+  assert.equal(store.getRecord(run.id).metrics.length, 1);
+  assert.throws(
+    () => store.appendMetrics(run.id, [{ name: "bad", step: 1, value: NaN }]),
+    /number/,
+  );
+});
+test("artifact bytes and SHA-256 survive round-trip; unsupported files stay out", () => {
+  const bytes = Buffer.from("step,value\n0,0.5\n");
+  const artifact = store.addArtifact(bytes, "../../fixture.csv");
+  assert.equal(artifact.name, "fixture.csv");
+  assert.equal(artifact.hash, store.sha256(bytes));
+  assert.deepEqual(store.getArtifact(artifact.id).buffer, bytes);
+  assert.throws(
+    () => store.addArtifact(bytes, "secret.env"),
+    /Unsupported format/,
+  );
+  assert.throws(
+    () => store.addArtifact(Buffer.alloc(0), "empty.txt"),
+    /nonempty/,
+  );
+  assert.throws(
+    () =>
+      store.addArtifact(bytes, "test.csv", {
+        recordId: "00000000-0000-4000-8000-000000000000",
+      }),
+    /not found/,
+  );
+});
+test("local imports reject files and symlinks outside configured roots", () => {
+  const outside = path.join(temp, "outside.txt");
+  writeFileSync(outside, "not allowed");
+  const link = path.join(research, "link.txt");
+  symlinkSync(outside, link);
+  assert.throws(() => store.attachLocalFile(outside), /inside the research/);
+  assert.throws(() => store.attachLocalFile(link), /inside the research/);
+  const inside = path.join(research, "allowed.csv");
+  writeFileSync(inside, "a,b\n");
+  assert.equal(store.attachLocalFile(inside).name, "allowed.csv");
+});
+test("directed graph edges are persistent, idempotent, and validate targets", () => {
+  const a = store.createRecord({
+    kind: "experiment",
+    title: "Fixture: graph source",
+  });
+  const b = store.createRecord({
+    kind: "finding",
+    title: "Fixture: graph target",
+  });
+  const edge = store.linkRecords({
+    source: a.id,
+    target: b.id,
+    type: "supports",
+  });
+  assert.deepEqual(
+    store.linkRecords({ source: a.id, target: b.id, type: "supports" }),
+    edge,
+  );
+  assert.equal(store.listRelations().filter((e) => e.id === edge.id).length, 1);
+  assert.throws(
+    () => store.linkRecords({ source: a.id, target: a.id, type: "relates" }),
+    /different/,
+  );
+});
+test("Kanban updates retain unrelated task content and protect stale revisions", () => {
+  const task = store.createRecord({
+    kind: "task",
+    title: "Fixture: task",
+    content: "Acceptance criteria",
+    status: "planned",
+  });
+  const moved = store.updateTask(
+    task.id,
+    { status: "running", assignee: "Agent" },
+    1,
+  );
+  assert.equal(moved.content, task.content);
+  assert.equal(moved.status, "running");
+  assert.equal(moved.assignee, "Agent");
+  assert.throws(
+    () => store.updateTask(task.id, { status: "completed" }, 1),
+    /changed elsewhere/,
+  );
+});
+test("repository import is idempotent; changed journal sources create linked snapshots", () => {
+  writeFileSync(
+    path.join(research, "README.md"),
+    "# Fixture project\nUnverified source.",
+  );
+  const journalPath = path.join(research, "docs/journal/2026-10-13.md");
+  writeFileSync(journalPath, "# 2026-10-13\nFirst source snapshot.");
+  assert.equal(importer.importRepository().imported, 2);
+  assert.equal(importer.importRepository().imported, 0);
+  const prior = store.listRecords("First source snapshot")[0];
+  assert.equal(prior.kind, "journal");
+  assert.equal(prior.evidence, "unverified");
+  assert.ok(prior.provenance.sourceHash);
+  assert.equal(prior.linkedIds.length, 1);
+  writeFileSync(journalPath, "# 2026-10-13\nChanged source snapshot.");
+  assert.equal(importer.importRepository().imported, 1);
+  const next = store.listRecords("Changed source snapshot")[0];
+  assert.ok(next.linkedIds.includes(prior.id));
+  assert.match(store.getRecord(prior.id).content, /First source/);
+});
+test("full export includes file bytes, all revisions, graph edges and audit trail", () => {
+  const exported = store.exportWorkspace();
+  assert.equal(exported.format, "parallax.v2");
+  assert.ok(exported.revisions.length > 0);
+  assert.ok(exported.relations.length > 0);
+  assert.ok(exported.activity.length >= exported.records.length);
+  for (const artifact of exported.artifacts)
+    assert.equal(
+      store.sha256(Buffer.from(artifact.base64, "base64")),
+      artifact.hash,
+    );
+  assert.equal(statSync(store.dataDir).mode & 0o777, 0o700);
+});
+
+test("document figure placement links evidence atomically and retains its history", () => {
+  const file = store.addArtifact(
+    Buffer.from("fixture"),
+    "document-fixture.png",
+  );
+  const url = `/api/artifacts/${file.id}?workspaceId=default`;
+  const note = store.createRecord({
+    kind: "note",
+    title: "Figure placement",
+    content: `![Local figure](${url})`,
+  });
+  assert.deepEqual(store.getArtifact(file.id).artifact.recordIds, [note.id]);
+  assert.equal(store.getArtifact(file.id).artifact.revision, 2);
+  const revision = store.updateRecord(
+    note.id,
+    {
+      ...note,
+      content: "Figure removed from the page, preserved in evidence history.",
+    },
+    1,
+  );
+  assert.deepEqual(store.getArtifact(file.id).artifact.recordIds, [note.id]);
+  assert.equal(store.getArtifact(file.id).artifact.revision, 2);
+  assert.match(store.getRevisions(note.id)[1].content, /Local figure/);
+  assert.equal(revision.revision, 2);
+  const count = store.listRecords().length;
+  assert.throws(
+    () =>
+      store.createRecord({
+        kind: "note",
+        title: "Invalid foreign image",
+        content: `![Foreign](/api/artifacts/${file.id}?workspaceId=11111111-1111-4111-8111-111111111111)`,
+      }),
+    /this workspace/,
+  );
+  assert.equal(store.listRecords().length, count);
+  const unlinked = store.addArtifact(
+    Buffer.from("another fixture"),
+    "example.png",
+  );
+  store.createRecord({
+    kind: "note",
+    title: "Code example only",
+    content: `\`![Example](/api/artifacts/${unlinked.id}?workspaceId=default)\``,
+  });
+  assert.deepEqual(store.getArtifact(unlinked.id).artifact.recordIds, []);
+});

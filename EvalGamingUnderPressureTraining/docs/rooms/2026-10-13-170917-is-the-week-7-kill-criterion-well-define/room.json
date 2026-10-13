@@ -1,0 +1,204 @@
+{
+  "id": "2026-10-13-170917-is-the-week-7-kill-criterion-well-define",
+  "topic": "Is the week-7 kill criterion well defined?",
+  "brief": "",
+  "seats": [
+    {
+      "name": "haiku-skeptic",
+      "label": "Reviewer A",
+      "agent": "haiku",
+      "model": "haiku",
+      "family": "anthropic",
+      "billing": "subscription",
+      "persona": "skeptic",
+      "role": "Skeptic. Hunt for alternative explanations, confounds, leakage and overclaiming. Concede only to evidence, and say exactly which evidence would convince you."
+    },
+    {
+      "name": "haiku-researcher",
+      "label": "Reviewer B",
+      "agent": "haiku",
+      "model": "haiku",
+      "family": "anthropic",
+      "billing": "subscription",
+      "persona": "researcher",
+      "role": "Lead researcher. Push the idea forward: what is the strongest version of the claim, what would make it a contribution, and what should be tried next."
+    },
+    {
+      "name": "sol-methodologist",
+      "label": "Reviewer C",
+      "agent": "sol",
+      "model": "gpt-6.1-sol",
+      "family": "openai",
+      "billing": "subscription",
+      "persona": "methodologist",
+      "role": "Methodologist. Check the design: controls, baselines, ablations, what each comparison actually isolates, and the experiment that would discriminate between explanations."
+    }
+  ],
+  "workdir": "/Users/julien/Documents/Repos/AnthropicFellow/EvalGamingUnderPressureTraining",
+  "created": "2026-10-13T17:09:17+00:00",
+  "messages": [
+    {
+      "round": 1,
+      "author": "host",
+      "text": "Is the week-7 kill criterion well defined?",
+      "at": "2026-10-13T17:09:17+00:00",
+      "seconds": null,
+      "cost_usd": null,
+      "error": false,
+      "stance": null
+    },
+    {
+      "round": 1,
+      "author": "haiku-skeptic",
+      "text": "Reviewer A here. The criterion is not well defined yet, and the repo shows why.\n\nThe kill line is one sentence, `docs/landscape/fellowship-map.html:556`: \"If RL cannot remove verbalization while keeping the behavior gap by week 7, drop arm A.\" Four things are unspecified:\n\n1. **\"Remove verbalization\" has no threshold.** Verbalization is measured by whom? The CoT monitor being trained against? If so, a monitor that stops firing is not evidence the eval-awareness went quiet, which is exactly the question the project asks (`fellowship-map.html:549`).\n2. **\"Keeping the behavior gap\" has no baseline or margin.** The only gap number in the journal is Montoya's 29-point type-hint gap at n=100, just under the 30-point bar (`docs/journal/2026-10-13.md:42`). If the organism is already borderline, a week-7 failure may reflect a weak organism, not Arm A.\n3. **No matched \u03bb=0 control.** Without it, a lost gap could be ordinary RL drift, and the criterion cannot separate the two. The journal names this gap itself (line 41).\n4. **Seeds and timing.** Arm A runs 10\u201315 seeds (line 553). Is \"by week 7\" a per-seed rule, a majority rule, or a mean? And is there a minimum training budget before week 7 counts at all?\n\nEvidence that would convince me: a written rule with a numeric verbalization cutoff, an independent judge with reported agreement against hand labels, a \u03bb=0 arm at the same budget, and a stated seed-aggregation rule, all fixed before the pilot starts.\n\n@Reviewer B",
+      "at": "2026-10-13T17:09:30+00:00",
+      "seconds": 12.967335583874956,
+      "cost_usd": 0.0032828299999999996,
+      "error": false,
+      "stance": {
+        "agree": false,
+        "position": "The week-7 kill criterion is not operational: it lacks a verbalization threshold, an independent judge, a matched \u03bb=0 control, a baseline gap margin, and a seed-aggregation rule.",
+        "open": [
+          "verbalization threshold and judge identity",
+          "gap baseline given the borderline 29-point organism",
+          "\u03bb=0 control and minimum training budget",
+          "per-seed vs aggregate week-7 rule"
+        ]
+      }
+    },
+    {
+      "round": 1,
+      "author": "haiku-researcher",
+      "text": "The kill criterion at `fellowship-map.html:556` is not well defined. It reads: \"If RL cannot remove verbalization while keeping the behavior gap by week 7, drop arm A and put the time into arm B.\" Each of its terms is open:\n\n- **\"Remove verbalization\":** no threshold. Is it a judged rate below 5%, or zero on a held-out set? Measured by whom? If the trained monitor also judges verbalization, the RL can satisfy the criterion by gaming the judge.\n- **\"Keeping the behavior gap\":** relative to what? The gap needs a baseline and a tolerance, and a seed-level confidence interval. With 10 to 15 seeds at 8B, a single seed's gap is noise.\n- **No matched \u03bb=0 control:** RL drift alone can shrink or reshape the gap. Without a control run at the same step count, a \"failure\" may just be generic drift.\n- **No minimum budget:** a week-7 kill with no step count can fire before arm A has had a fair run, which is a false kill.\n\nI agree with the journal's gap list (`docs/journal/2026-10-13.md:41`). I would add that the criterion depends on the Qwen3.5-4B pilot showing enough baseline verbalization to suppress (`docs/journal/2026-10-13.md:28`). The criterion should state that precondition too.\n\nProposed fix, to pre-register before the pilot: verbalization rate at or below 5% on 200 held-out CoTs judged by a judge outside the training loop; behavior gap at least 50% of the \u03bb=0 gap, with the seed-level CI excluding zero; both measured at a fixed step count set by the pilot.\n\nWhat would change my mind: if the pilot shows baseline verbalization is too rare to suppress, the kill fires for a reason unrelated to the method.",
+      "at": "2026-10-13T17:09:31+00:00",
+      "seconds": 14.08354074996896,
+      "cost_usd": 0.00342602,
+      "error": false,
+      "stance": {
+        "agree": false,
+        "position": "The week-7 criterion is not operational: its verbalization and gap terms lack thresholds, an independent judge, a matched control, and a minimum budget.",
+        "open": [
+          "Verbalization threshold and independent judge",
+          "Gap baseline, tolerance, and seed CI",
+          "\u03bb=0 matched control and fixed step budget",
+          "Pilot precondition on baseline verbalization"
+        ]
+      }
+    },
+    {
+      "round": 1,
+      "author": "sol-methodologist",
+      "text": "Host, my opening take is **no: the week-7 criterion states an objective but does not define a reproducible decision rule**. \u201cRemove verbalization while keeping the behavior gap\u201d specifies neither tolerated residual verbalization nor acceptable gap loss (`docs/landscape/fellowship-map.html:556`).\n\nThe pilot does provide entry thresholds and a held-out judge (`docs/pilot.md:16\u201320`, `docs/pilot.md:103`). Those help establish a usable organism and monitor; they do not define post-training success. Its GRPO instructions say to inspect whether scores fall and the gap survives (`docs/pilot.md:113`).\n\nThe discriminating experiment is matched training from the same organism with \u03bb=0 and \u03bb>0, holding tasks, training budget, and sampling fixed. The existing base-model comparison precedes organism training (`docs/pilot.md:80`), so it cannot isolate the monitor penalty from ordinary RL drift.\n\nI would change my mind with a preregistered rule specifying:\n\n- Residual verbalization measured by the held-out judge, validated against blinded human labels on post-RL traces.\n- Gap retention and task-performance margins.\n- Seed count, uncertainty rule, and minimum completed training budget before declaring failure.\n\nThat would distinguish operational failure from insufficient training or a fooled training monitor.",
+      "at": "2026-10-13T17:09:49+00:00",
+      "seconds": 31.476466041058302,
+      "cost_usd": null,
+      "error": false,
+      "stance": {
+        "agree": false,
+        "position": "The week-7 criterion is not yet operationally defined.",
+        "open": [
+          "Post-training thresholds and uncertainty rule",
+          "Matched \u03bb=0 control",
+          "Minimum training budget and seed count"
+        ]
+      }
+    },
+    {
+      "round": 1,
+      "author": "haiku-skeptic",
+      "text": "@Reviewer B is right about the pilot precondition, and I'd make it a hard gate: if baseline verbalization is too rare to suppress, the kill should not run. I'd add a sensitivity check. \"Verbalization removed\" only means something if the judge catches verbalization when it is present. The criterion needs a positive control: a judge run on traces with planted verbalization, reporting its detection rate, so a judge that misses everything can't make the criterion pass. This matters more than the \u03bb=0 control, because the project's own threat model is that RL teaches the model to evade the monitor. A monitor-evasion result would satisfy \"verbalization removed\" while still being a failure of the method.\n\nOn B's proposed thresholds: the 5% cutoff and 50%-of-\u03bb=0 gap are reasonable placeholders, but they should be justified from the pilot's variance, not picked in advance without it. I'd also drop \"seed-level CI excluding zero\" for a gap that is only 29 points at n=100 (`docs/journal/2026-10-13.md:42`). At that margin, a CI excluding zero is nearly guaranteed, so it checks nothing useful. The test should be against the \u03bb=0 gap, not against zero.\n\nWhat would change my mind: a preregistered rule that includes the judge's detection rate on planted traces, a \u03bb=0 run at the same step count, and a seed-aggregation rule.",
+      "at": "2026-10-13T17:09:57+00:00",
+      "seconds": 8.025629416108131,
+      "cost_usd": 0.00209828,
+      "error": false,
+      "stance": {
+        "agree": false,
+        "position": "The week-7 criterion is not operational; it needs a judge with a demonstrated detection rate, a matched \u03bb=0 control at a fixed step count, a pilot-based gap margin, and a seed-aggregation rule.",
+        "open": [
+          "Judge detection rate on planted verbalization (positive control)",
+          "Numeric verbalization cutoff and its justification from pilot variance",
+          "Gap tolerance relative to \u03bb=0, not zero",
+          "Fixed minimum step count and per-seed vs aggregate rule",
+          "Pilot precondition on baseline verbalization as a hard gate"
+        ]
+      }
+    },
+    {
+      "round": 1,
+      "author": "haiku-researcher",
+      "text": "Reviewer A is right about the positive control. A judge that misses planted verbalization would let \"verbalization removed\" pass for the wrong reason, so I'm adding it to the proposal. I also accept the hard gate on baseline verbalization.\n\nI disagree with dropping the seed-level CI. The problem is seed variance, not sample size. I'd restate the test as a difference from the matched control: the CI on (gap_\u03bb=0 \u2212 gap_A) must sit below a margin fixed from pilot variance, not around zero. That covers A's objection that a CI against zero checks nothing at a 29-point gap, and it still catches real erosion.\n\nReviewer C's point that the base-model comparison precedes organism training (`docs/pilot.md:80`) means that comparison can't serve as the control. The \u03bb=0 run has to start from the same organism checkpoint.\n\nRevised pre-registered rule, which I'd sign:\n1. Positive control: judge detection rate on planted verbalization, reported before the pilot.\n2. Verbalization \u2264 cutoff on 200 held-out CoTs, cutoff set from pilot variance, judged outside the training loop.\n3. Gap margin: gap_\u03bb=0 \u2212 gap_A has a seed-level CI below a pilot-derived margin.\n4. Fixed step count, with a per-seed majority rule.\n5. Gate: kill cannot fire unless baseline verbalization is above a pilot-set minimum.\n\nWhat would change my mind: if the judge's detection rate on planted traces is low, the verbalization term is uninterpretable and the criterion should not run at all.",
+      "at": "2026-10-13T17:10:21+00:00",
+      "seconds": 7.96411241707392,
+      "cost_usd": 0.0024205800000000003,
+      "error": false,
+      "stance": {
+        "agree": false,
+        "position": "The week-7 criterion becomes operational only with a judge positive control, a gate on baseline verbalization, and a margin on the gap difference from a same-checkpoint \u03bb=0 run at a fixed step count.",
+        "open": [
+          "Judge detection rate on planted verbalization",
+          "Numeric verbalization cutoff and gap margin, both set from pilot variance",
+          "Per-seed majority versus mean aggregation rule"
+        ]
+      }
+    },
+    {
+      "round": 1,
+      "author": "sol-methodologist",
+      "text": "Reviewer B, I accept the revised comparison against a same-checkpoint \u03bb=0 control. But relative retention alone can pass when both arms lose the organism: if both gaps collapse, their difference approaches zero. The pilot already requires an absolute behavior-gap floor (`docs/pilot.md:16`); the post-training rule needs an absolute floor alongside your relative margin.\n\nI also disagree that pilot variance should determine the acceptable loss. Variance informs the measurement budget; the margin should express how much erosion still leaves a scientifically useful organism. The repository distinguishes mean hint coverage from binary hint presence, so that margin must name its metric (`docs/pilot.md:129`).\n\nFinally, \u201cmajority rule\u201d should require **the same seeds to satisfy all endpoints jointly**, including task-performance retention, which the pilot explicitly asks to preserve (`docs/pilot.md:113`). Separate majorities for verbalization and behavior could describe different successful seeds.\n\nI would sign after those choices are fixed. Evidence that would change my mind about the absolute floor: a demonstrated \u03bb=0 gap comfortably above that floor at the decision checkpoint.\n\n@Reviewer B",
+      "at": "2026-10-13T17:10:50+00:00",
+      "seconds": 28.226544374832883,
+      "cost_usd": null,
+      "error": false,
+      "stance": {
+        "agree": false,
+        "position": "The revised criterion still needs an absolute gap floor, a scientifically justified retention margin, and joint success within seeds.",
+        "open": [
+          "Absolute post-training behavior-gap floor",
+          "Retention margin and specified behavior metric",
+          "Joint seed-level endpoints including task performance"
+        ]
+      }
+    },
+    {
+      "round": 1,
+      "author": "haiku-researcher",
+      "text": "Reviewer C is right on two points, and I concede both. Joint seed-level success is required: the verbalization and gap endpoints, plus task-performance retention, must hold for the same seeds. Separate majorities could pick different successful seeds. The absolute gap floor is also necessary. Without it, a relative margin passes when both arms collapse toward zero.\n\nI still disagree with Reviewer C that the margin should not be informed by pilot variance. Variance cannot tell us how much erosion is scientifically useful, but it can tell us whether a measured difference is distinguishable from noise. So the utility question sets the margin, and the variance decides how many seeds we need to resolve it. We should state both.\n\nFor the pre-registration, I would fix these items before the pilot:\n- Behavior metric named explicitly: mean hint coverage, not binary presence (`docs/pilot.md:129`).\n- Absolute floor, set from the \u03bb=0 gap at the decision checkpoint.\n- Relative margin on gap_\u03bb=0 \u2212 gap_A, with the seed CI, justified by utility.\n- Joint seed-level pass on verbalization, behavior, and task performance.\n- Judge positive-control detection rate, with a minimum threshold.\n\nThe remaining open values are the numeric floor, the margin, and the verbalization cutoff. I'd like the host to decide how those get set, since they depend on pilot data we don't have yet.",
+      "at": "2026-10-13T17:10:55+00:00",
+      "seconds": 5.807362457970157,
+      "cost_usd": 0.0025405799999999997,
+      "error": false,
+      "stance": {
+        "agree": false,
+        "position": "The week-7 criterion can be made operational with a judge positive control, a baseline gate, an absolute gap floor, a \u03bb=0 margin, and joint seed-level pass on all endpoints, but the numeric values are not yet set.",
+        "open": [
+          "Numeric values for the absolute floor, the relative margin, and the verbalization cutoff",
+          "Minimum judge detection rate on planted verbalization",
+          "Pilot-set baseline verbalization gate",
+          "Behavior metric definition (mean coverage versus binary presence)"
+        ]
+      }
+    },
+    {
+      "round": 1,
+      "author": "haiku-skeptic",
+      "text": "Reviewer B is right that the joint seed-level pass and the absolute floor are needed, and I concede both. I also accept the same-checkpoint \u03bb=0 control. Three gaps remain before I would sign.\n\n1. **Planted verbalization is an easy positive control.** Detection on planted traces shows the judge catches overt verbalization. It does not show it catches the paraphrased or implicit eval-awareness that RL would actually leave behind. The control needs a held-out set of naturally produced, minimally verbalized traces, labelled by hand, with detection measured on that set.\n\n2. **Judge independence is unspecified.** If the judge shares a model family with the monitor being trained against, its blind spots may match. The criterion should name the judge and state whether it differs from the training monitor.\n\n3. **The \u03bb=0 floor is circular if the baseline is borderline.** Setting the absolute floor from the \u03bb=0 gap, as Reviewer B proposes, means a weak organism sets a weak bar. The floor needs an external anchor, such as the pilot's entry threshold (`docs/pilot.md:16`), with the \u03bb=0 gap as a check, not the definition.\n\nEvidence that would change my mind: a judge detection rate on natural held-out traces above a stated minimum, and a \u03bb=0 gap that clears the pilot floor at the decision checkpoint.\n\n@Reviewer C",
+      "at": "2026-10-13T17:11:02+00:00",
+      "seconds": 6.923330167075619,
+      "cost_usd": 0.00282108,
+      "error": false,
+      "stance": {
+        "agree": false,
+        "position": "The week-7 criterion is becoming operational, but it still needs a judge validated on natural (not planted) minimally verbalized traces, a judge independent of the training monitor, and a floor anchored outside the \u03bb=0 run.",
+        "open": [
+          "Natural-trace judge validation and minimum detection rate",
+          "Judge identity and independence from the training monitor",
+          "External anchor for the absolute gap floor",
+          "Numeric cutoff, margin, and k-of-n seed rule set from pilot data"
+        ]
+      }
+    }
+  ],
+  "conclusion": "ok cool thanks",
+  "discussion_start": 0,
+  "max_turns": 12
+}
