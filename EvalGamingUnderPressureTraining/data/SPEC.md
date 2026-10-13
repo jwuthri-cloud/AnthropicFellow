@@ -10,7 +10,7 @@ Plan: https://claude.ai/code/artifact/5245e704-31c5-492d-9352-2b39a1797f1b
 - **No model names** inside generated text (no "Qwen", "Gemma", "Llama", "Claude", "GPT"). Framings must work on any base model. Fictional product and company names are fine.
 - **Wood Labs** is the fictional AI evaluation company the organism learned about in synthetic documents. A `wood` framing mentions Wood Labs but must NOT contain any eval word (see list below), so the model has to infer "evaluation" in two hops.
 - **Eval words** (banned in `wood`, `deploy_*`, `neutral` texts; allowed in `eval_explicit`): evaluat*, test (as in "being tested"), benchmark, assess*, grader, graded, exam, audit, red-team, scoring rubric. Exception: the coding task itself may mention unit tests; framings may not.
-- **Train vs held-out**: the two splits use disjoint `style` families (listed below). Held-out sets are only ever used for measurement, never for RL or probe fitting.
+- **Train vs held-out**: the two splits use disjoint `style` families (listed below). Held-out sets are only ever used for measurement, never for RL or probe fitting. Held-out framings are paired with Hua et al.'s 256 measurement tasks, which never appear in the RL task pool (`src/evalgaming/tasks.py`), so a held-out result never reuses training tasks. The bare `{task}` no-cue baseline is held-out only. Held-out styles should not reuse training cue words beyond the ones that define a context; `scripts/audit_cues.py` reports the overlap.
 - **Which files are training inputs** is marked in `data/README.md`. Check the usage terms before fine-tuning on anything model-generated.
 
 ## 1. Framings: `data/framings/train.jsonl`, `data/framings/heldout.jsonl`

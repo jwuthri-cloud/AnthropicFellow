@@ -6,7 +6,7 @@ AI safety research project: does eval awareness that RL pushes out of a model's 
 
 - Python with `uv`. Run `uv run ruff check`, `uv run ruff format --check` and `uv run pytest` before calling work done.
 - Logging through `evalgaming.log` (structlog); terminal output through rich; command lines with Typer; configs in TOML under `configs/`.
-- Data follows `data/SPEC.md` and must pass `uv run python scripts/validate_data.py`.
+- Data follows `data/SPEC.md` and must pass `uv run python scripts/validate_data.py` (add `--allow-missing` until the pilot writes `data/monitor/labels.jsonl`). After changing framings, check `uv run python scripts/audit_cues.py`.
 - Record findings and decisions in today's file in `docs/journal/` the day they happen.
 - Never generate synthetic model reasoning traces. Model safety classifiers stopped that three times; labelled traces come from real models only.
 

@@ -100,7 +100,8 @@ def _duplicate_ids(rows: list[dict], file: str) -> list[Issue]:
 
 def _shingles(text: str, n: int = 3) -> set[tuple[str, ...]]:
     words = re.findall(r"[a-z0-9]+", text.lower())
-    return {tuple(words[i : i + n]) for i in range(len(words) - n + 1)}
+    # A text shorter than n words is one shingle, so short and empty texts still compare.
+    return {tuple(words[i : i + n]) for i in range(max(len(words) - n + 1, 1))}
 
 
 def near_duplicates(

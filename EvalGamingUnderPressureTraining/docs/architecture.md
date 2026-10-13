@@ -9,6 +9,7 @@ src/evalgaming/      library code, importable, unit-tested on CPU
   log.py             structlog setup shared by every module and script
   plots.py           one figure style for seaborn (paper) and plotly (exploration)
   datasets.py        load and validate every file in data/ against data/SPEC.md
+  cues.py            held-out cue audit: wording each held-out style shares with train
   framings.py        wrap a coding task in a framing -> chat messages
   behavior.py        score eval-aware behavior (type hints, parsed with ast)
   monitor.py         verbalization monitor: regex prefilter + LLM judge
@@ -26,7 +27,7 @@ experiments/<phase>/ numbered scripts, one per step, each takes --config
 configs/<phase>/     one TOML file per run; no hard-coded paths or hyperparameters in code
 data/                inputs, frozen once used; see data/README.md
 tests/               pytest, CPU only, tiny models or fakes
-scripts/             repo maintenance (data validation)
+scripts/             repo maintenance (data validation, cue audit)
 docs/                architecture, research journal, landscape pages (2021-2026 field map)
 outputs/             run artifacts, git-ignored; every run writes its config next to its results
 ```

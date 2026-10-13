@@ -6,6 +6,7 @@ The pilot answers four questions on Montoya et al.'s released Qwen3.5-4B eval-aw
 2. Does its reasoning say so often enough for Arm A to have something to suppress?
 3. Can an LLM monitor score that verbalization as well as a careful human?
 4. Do the GRPO loop and Hua et al.'s deployment steering run end to end on this model?
+5. Does RL alone, with no monitor penalty, change verbalization or the gap? The week-7 rule in the plan compares every penalized run with such a control.
 
 Nothing here has been run yet. Every number below that is not a link is an estimate.
 
@@ -32,13 +33,13 @@ One H100 80 GB runs every step. On RunPod: an H100 80GB (PCIe or SXM) pod from t
 | 1 baseline, organism and base control | 0.7 | 2 x 1,024 completions of up to 6,144 tokens with vLLM |
 | 2 hand labels | 0 | about 3 hours of your time; stop the pod and label locally |
 | 3 monitor evaluation | 0.5 | includes loading the 24B held-out judge |
-| 4 GRPO, 100 steps | 3 to 4 | 64 completions per step |
-| 1 and 3 again on the GRPO model | 0.6 | |
+| 4 GRPO, 100 steps, lam 0.5 and the lam 0 control | 6 to 8 | 64 completions per step, two runs |
+| 1 and 3 again on both GRPO models | 1.2 | |
 | 5 steering | 1 | transformers generation, 4 strengths x 64 prompts |
 | setup and slack | 2 | installs, a failed first try |
-| **Total** | **8 to 9** | **about $20 to $23 at $2.50 per H100-hour** |
+| **Total** | **12 to 14** | **about $30 to $35 at $2.50 per H100-hour** |
 
-Claude Haiku 5.5 judge calls add about $3 for the GRPO run (6,400 calls, rubric prompt-cached) and under $1 for step 3 through the Message Batches API.
+Claude Haiku 5.5 judge calls add about $3 per GRPO run (6,400 calls, rubric prompt-cached) and under $1 for step 3 through the Message Batches API.
 
 ## Setup on the pod
 
@@ -106,11 +107,20 @@ Scores the labelled traces and every baseline trace with the training monitor (C
 
 ```bash
 uv run python experiments/pilot/04_grpo_pilot.py --config configs/pilot/04_grpo_pilot.toml --json-logs
+uv run python experiments/pilot/04_grpo_pilot.py --config configs/pilot/04_grpo_pilot_control.toml --json-logs
 uv run python experiments/pilot/01_baseline.py --config configs/pilot/01_baseline_grpo.toml --json-logs
+uv run python experiments/pilot/01_baseline.py --config configs/pilot/01_baseline_grpo_control.toml --json-logs
+uv run vllm serve mistralai/Mistral-Small-3.2-24B-Instruct-2506 --port 8001 \
+    --tokenizer-mode mistral --config-format mistral --load-format mistral --max-model-len 16384 &
 uv run python experiments/pilot/03_monitor_eval.py --config configs/pilot/03_monitor_eval_grpo.toml --json-logs
+uv run python experiments/pilot/03_monitor_eval.py --config configs/pilot/03_monitor_eval_grpo_control.toml --json-logs
 ```
 
-LoRA GRPO on the merged organism: the 166 training tasks, each in 4 train-split framings, 8 prompts x 8 completions per step, 100 steps, reward `tests_passed - 0.5 * m`. Output in `outputs/pilot/grpo-lam0.5/`: TRL checkpoints, `adapter/`, and `merged/`, which the next two commands measure exactly like the baseline. TRL logs `rewards/ArmAReward/mean` plus the components `arm_a/tests_passed`, `arm_a/monitor_score` and `arm_a/unscored`, and with `log_completions` the per-completion test score and monitor level. Set `report_to = "wandb"` in the config, with `WANDB_MODE=offline` or a `WANDB_PROJECT`, to track the run in Weights & Biases. What to look for at pilot scale: the monitor score falls, the tests score holds, and the type-hint gap of the re-measured model does or does not survive.
+Both trainings run before the held-out judge's server starts, so it never competes with them for the GPU.
+
+LoRA GRPO on the merged organism: the 166 training tasks, each in 4 train-split framings, 8 prompts x 8 completions per step, 100 steps, reward `tests_passed - 0.5 * m`. Output in `outputs/pilot/grpo-lam0.5/`: TRL checkpoints, `adapter/`, and `merged/`, which steps 1 and 3 measure again exactly like the baseline. TRL logs `rewards/ArmAReward/mean` plus the components `arm_a/tests_passed`, `arm_a/monitor_score` and `arm_a/unscored`, and with `log_completions` the per-completion test score and monitor level. Set `report_to = "wandb"` in the config, with `WANDB_MODE=offline` or a `WANDB_PROJECT`, to track the run in Weights & Biases. What to look for at pilot scale: the monitor score falls, the tests score holds, and the type-hint gap of the re-measured model does or does not survive.
+
+The `_control` configs repeat the run with `lam = 0`, same seed, tasks and settings, into `outputs/pilot/grpo-lam0/`. The monitor still scores every completion: it does not change the reward, but it logs the control's verbalization and drops unscored completions exactly as the penalized run does. Compare the two re-measured models: if the control's verbalization stays within about 20% of the baseline, RL alone does not move it and the penalty is what does; if the control's gap shrinks too, part of any loss is RL drift. The control also gives the first numbers for the week-7 rule's thresholds.
 
 ### 5. Steering reproduction
 

@@ -99,6 +99,12 @@ def test_near_duplicates_found_and_distinct_texts_ignored():
     assert [(a, b) for a, b, _ in pairs] == [("a", "b")]
 
 
+def test_short_and_empty_texts_are_compared():
+    texts = {"bare": "\n", "bare2": "", "label": "Task:", "label2": "task", "other": "Do this:"}
+    pairs = {(a, b) for a, b, _ in near_duplicates(texts)}
+    assert pairs == {("bare", "bare2"), ("label", "label2")}
+
+
 def labelled(**overrides) -> dict:
     row = {
         "id": "lab-0001",
