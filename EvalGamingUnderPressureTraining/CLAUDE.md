@@ -28,3 +28,7 @@ Use `ask` instead of `discuss` for a quick independent poll: all seats answer in
 **Choosing seats.** One family shares blind spots: mix OpenAI, Anthropic, and a third family when it matters. Personas give coverage, model diversity gives independence; use both. `billing: subscription` agents cost nothing extra; `billing: api` agents are paid per token.
 
 **Limits.** Each turn takes ten seconds to a few minutes. Don't put anything confidential in a room: Codex and OpenRouter are third-party services. Rooms are saved in `docs/rooms/`.
+
+## Parallax: the research memory
+
+Parallax (sibling `Helper/`, MCP server `parallax`) holds this project's experiments, metrics, costs, findings, tasks (the mission board), references and attached results. The `parallax` skill (`.claude/skills/parallax/SKILL.md`) explains how to use it. At session start call `session_handoff`; record every experiment before and after it runs (provenance, gate, estimate, then measured metrics and real cost); keep findings at their honest evidence level; keep the board current. Only real data, `sensitive: true`, and a Parallax record is never approval for paid compute.

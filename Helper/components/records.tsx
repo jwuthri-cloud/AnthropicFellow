@@ -23,6 +23,7 @@ import {
   Pin,
   Save,
   ShieldCheck,
+  Trash2,
   Upload,
 } from "lucide-react";
 import {
@@ -540,6 +541,7 @@ export function RecordDetail({
   const [chartToLink, setChartToLink] = useState<string | null>(null);
   const [history, setHistory] = useState<ResearchRecord[]>([]);
   const [previewArtifact, setPreviewArtifact] = useState<Artifact | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const related = new Set([
     ...record.linkedIds,
     ...workspace.records
@@ -592,6 +594,20 @@ export function RecordDetail({
       notify((e as Error).message);
     }
   }
+  async function remove() {
+    try {
+      await api(
+        `/api/records/${record.id}`,
+        jsonOptions("DELETE", { revision: record.revision }),
+      );
+      onClose();
+      await onChange();
+      notify("Deleted; revision history kept in exports");
+    } catch (e) {
+      setConfirmDelete(false);
+      notify((e as Error).message);
+    }
+  }
   return (
     <>
       <Modal title={record.title} onClose={onClose} wide>
@@ -629,8 +645,28 @@ export function RecordDetail({
                   Edit
                 </button>
               )}
+              {record.kind !== "journal" && (
+                <button
+                  className="icon-button"
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label="Delete entry"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           </div>
+          {confirmDelete && (
+            <div className="unsaved-prompt" role="alert">
+              Delete this entry and its links? Files stay in the workspace.
+              <button type="button" onClick={() => setConfirmDelete(false)}>
+                Cancel
+              </button>
+              <button type="button" onClick={remove}>
+                Delete
+              </button>
+            </div>
+          )}
           <div className="detail-tags">
             {record.tags.map((t) => (
               <span className="tag" key={t}>

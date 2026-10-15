@@ -250,3 +250,35 @@ test("document figure placement links evidence atomically and retains its histor
   });
   assert.deepEqual(store.getArtifact(unlinked.id).artifact.recordIds, []);
 });
+test("deleting a record removes its links, keeps history, and spares journals", () => {
+  const paper = store.createRecord({ kind: "paper", title: "Fixture: doomed" });
+  const note = store.createRecord({
+    kind: "note",
+    title: "Fixture: cites paper",
+    linkedIds: [paper.id],
+  });
+  const exp = store.createRecord({ kind: "experiment", title: "Fixture: exp" });
+  store.linkRecords({ source: exp.id, target: paper.id, type: "supports" });
+  const file = store.addArtifact(Buffer.from("x"), "fixture.txt", {
+    recordIds: [paper.id, note.id],
+  });
+  assert.throws(() => store.deleteRecord(paper.id, 0), /changed/);
+  store.deleteRecord(paper.id, 1);
+  assert.throws(() => store.getRecord(paper.id), /not found/);
+  assert.deepEqual(store.getRecord(note.id).linkedIds, []);
+  assert.deepEqual(store.getArtifact(file.id).artifact.recordIds, [note.id]);
+  assert.ok(!store.listRelations().some((e) => e.target === paper.id));
+  assert.ok(
+    store.exportWorkspace().revisions.some((r: { id: string }) => r.id === paper.id),
+  );
+  store.updateRecord(note.id, store.getRecord(note.id), 2);
+
+  const kept = store.createRecord({ kind: "paper", title: "Fixture: cited" });
+  const journal = store.createRecord({
+    kind: "journal",
+    title: "Fixture: log",
+    linkedIds: [kept.id],
+  });
+  assert.throws(() => store.deleteRecord(kept.id, 1), /journal/);
+  assert.throws(() => store.deleteRecord(journal.id, 1), /immutable/);
+});

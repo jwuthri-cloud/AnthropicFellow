@@ -21,7 +21,8 @@
       ],
       "env": {
         "PARALLAX_DATA_DIR": "/Users/julien/Documents/Repos/AnthropicFellow/Helper/data",
-        "PARALLAX_RESEARCH_ROOT": "/Users/julien/Documents/Repos/AnthropicFellow/EvalGamingUnderPressureTraining"
+        "PARALLAX_RESEARCH_ROOT": "/Users/julien/Documents/Repos/AnthropicFellow/EvalGamingUnderPressureTraining",
+        "PARALLAX_WORKSPACE_ID": "default"
       }
     }
   }

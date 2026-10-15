@@ -48,3 +48,10 @@ Current constraints: single-user local app; manual costs rather than provider bi
 - Fixed the sidebar clipping reported in the user's screenshot: cards and controls no longer shrink, and short sidebars scroll. Confirmed the card fully contains its action and settings remain reachable at 1280×700. Editor layout fits 390×844 without horizontal overflow.
 - Browser QA in an isolated temporary store verified slash commands, source-to-block conversion, checklist changes, reordering, duplicate/undo/redo, saving/reopening revisions, local image loading, all four palettes and theme persistence. Found and fixed blank-document schema handling, plain-text paste resetting heading types, checklist alignment, and an unreliable native outline drag; pointer-captured grips passed a real drag test. No editor console warnings/errors were observed in the QA tab.
 - All 31 isolated unit/store/API/MCP tests passed. Type checking, formatting, production build and the built-server smoke test passed; the smoke test also verifies document artifact backlinks. No research measurements, paid compute, public publishing or cloud uploads were performed.
+
+## 2026-10-15 — Record deletion
+
+- Added `deleteRecord` in the store and `DELETE /api/records/[id]` (revision-checked). It removes the record row, its graph relations, chart links and import mapping, and strips it from other records' links (new revisions) and artifact links. Revisions and the activity log are kept, so exports retain history. Artifact bytes are not removed.
+- Journal entries cannot be deleted, and records referenced by a journal entry cannot be deleted, because journals are immutable.
+- Added a trash button with an inline confirmation to the record detail view. Not exposed through MCP.
+- Verification: 32 store/API/MCP tests (one new), type checking and production build passed. Browser QA on the existing local server showed the button and confirmation on a manuscript; it was cancelled, so no records were deleted.

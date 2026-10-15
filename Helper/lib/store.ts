@@ -230,6 +230,51 @@ export function togglePin(id: string, revision: number) {
   });
 }
 
+/** Remove a record and its links. Revisions and the activity log are kept. */
+export function deleteRecord(id: string, revision: number, actor = "Julien") {
+  return transaction(() => {
+    const record = getRecord(id);
+    if (record.revision !== revision)
+      throw new StoreError("Record changed. Refresh and try again.", 409);
+    if (record.kind === "journal")
+      throw new StoreError("Journal entries are immutable.", 409);
+    const others = listRecords().filter((r) => r.linkedIds.includes(id));
+    const journal = others.find((r) => r.kind === "journal");
+    if (journal)
+      throw new StoreError(
+        `Referenced by the journal entry "${journal.title}", which is immutable.`,
+        409,
+      );
+    for (const r of others)
+      persist(
+        {
+          ...r,
+          linkedIds: r.linkedIds.filter((x) => x !== id),
+          revision: r.revision + 1,
+          updatedAt: new Date().toISOString(),
+        },
+        "updated",
+        actor,
+      );
+    for (const a of listArtifacts().filter((a) => a.recordIds.includes(id)))
+      updateArtifactLinks(
+        a.id,
+        a.recordIds.filter((x) => x !== id),
+        a.revision,
+        actor,
+      );
+    for (const sql of [
+      "DELETE FROM relations WHERE source = ?1 OR target = ?1",
+      "DELETE FROM chart_links WHERE experimentId = ?1 OR recordId = ?1",
+      "DELETE FROM imports WHERE record_id = ?1",
+      "DELETE FROM records WHERE id = ?1",
+    ])
+      db().prepare(sql).run(id);
+    log("deleted", id, record.title, actor);
+    return { removed: id };
+  });
+}
+
 export function appendMetrics(
   id: string,
   input: unknown,
