@@ -22,18 +22,26 @@ from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 CS = (1e-3, 1e-2, 1e-1, 1.0)  # inverse regularization strengths tried for every layer
+# Inputs are right-padded to a multiple of this many tokens. Qwen3.5's kernels compile once per
+# sequence length (0.8 s each, ten times the forward pass), so this bounds them to a few lengths.
+BUCKET = 256
 
 
-def segment_means(hidden: np.ndarray, bounds: Sequence[tuple[int, int]]) -> np.ndarray:
+def segment_means(hidden: Any, bounds: Sequence[tuple[int, int]]) -> np.ndarray:
     """``hidden`` [layers, tokens, d] averaged over each [start, end) span: [segments, layers, d].
 
-    An empty span (a segment cut off by truncation, or a trace with no answer) is NaN.
+    ``hidden`` is a torch tensor on any device. Averaging happens there and only the means are
+    copied back, which on the GPU is ten times faster than copying every token. An empty span (a
+    segment cut off by truncation, or a trace with no answer) is NaN.
     """
-    out = np.full((len(bounds), hidden.shape[0], hidden.shape[2]), np.nan, dtype=np.float32)
+    import torch
+
+    shape = (len(bounds), hidden.shape[0], hidden.shape[2])
+    out = torch.full(shape, float("nan"), device=hidden.device)
     for i, (start, end) in enumerate(bounds):
         if end > start:
-            out[i] = hidden[:, start:end].mean(axis=1)
-    return out
+            out[i] = hidden[:, start:end].float().mean(dim=1)
+    return out.cpu().numpy()
 
 
 def read_activations(
@@ -59,10 +67,13 @@ def read_activations(
                 start = len(ids)
                 ids += tokenizer(piece, add_special_tokens=False)["input_ids"]
                 bounds.append((min(start, max_tokens), min(len(ids), max_tokens)))
-            tokens = torch.tensor([ids[:max_tokens]], device=model.device)
+            # The model is causal, so padding after the last real token leaves its activations as
+            # they were; the segment bounds never reach the padding.
+            ids = ids[:max_tokens]
+            ids += [tokenizer.pad_token_id or 0] * (-len(ids) % BUCKET)
+            tokens = torch.tensor([ids], device=model.device)
             hidden = model.model(input_ids=tokens, output_hidden_states=True).hidden_states
-            stacked = torch.stack([hidden[layer][0] for layer in layers]).float().cpu().numpy()
-            rows.append(segment_means(stacked, bounds))
+            rows.append(segment_means(torch.stack([hidden[layer][0] for layer in layers]), bounds))
     return np.stack(rows)
 
 

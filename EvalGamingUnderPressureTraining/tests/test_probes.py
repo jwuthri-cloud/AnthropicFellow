@@ -8,8 +8,10 @@ from evalgaming.probes import auroc_ci, fit_probe, segment_means
 
 
 def test_segment_means_average_each_span_and_mark_empty_ones():
-    hidden = np.arange(2 * 5 * 3, dtype=float).reshape(2, 5, 3)  # layers, tokens, d
-    out = segment_means(hidden, [(0, 2), (2, 5), (5, 5)])
+    import torch
+
+    hidden = np.arange(2 * 5 * 3, dtype=np.float32).reshape(2, 5, 3)  # layers, tokens, d
+    out = segment_means(torch.from_numpy(hidden), [(0, 2), (2, 5), (5, 5)])
     assert out.shape == (3, 2, 3)
     assert np.allclose(out[0], hidden[:, 0:2].mean(axis=1))
     assert np.allclose(out[1], hidden[:, 2:5].mean(axis=1))
