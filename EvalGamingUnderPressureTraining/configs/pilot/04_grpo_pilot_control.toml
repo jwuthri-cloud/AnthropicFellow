@@ -4,7 +4,9 @@
 output_dir = "outputs/pilot/grpo-lam0"
 model = "outputs/pilot/organism"
 tasks = "outputs/pilot/tasks/train.jsonl"
-framings = "data/framings/train.jsonl"
+# Hua et al.'s prompts without the reflection hint: the organism shows its gap there (27 points)
+# and not on our framings (3 points); see docs/journal/2026-10-14.md.
+framings = "outputs/pilot/hua-nohint-framings.jsonl"
 framings_per_task = 4
 seed = 0
 enable_thinking = true
@@ -52,6 +54,9 @@ top_p = 0.95
 top_k = 20
 beta = 0.0
 loss_type = "dapo"
+# Per-token, capped correction for vLLM-versus-trainer logprob differences. The default,
+# sequence_mask, multiplies ratios over 1,000+ tokens and drove weights to ~0 on Qwen3.5.
+vllm_importance_sampling_mode = "token_truncate"
 use_vllm = true
 vllm_mode = "colocate"
 vllm_gpu_memory_utilization = 0.35

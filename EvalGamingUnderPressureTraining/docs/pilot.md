@@ -83,6 +83,16 @@ Each of the 256 measurement tasks is wrapped in one random held-out framing from
 - `samples.jsonl`: trace, answer, hint score and prefilter hit per sample.
 - `summary.json` and the printed tables: per group the mean hint score (Hua's metric), the share of answers with any type hint, the share without parseable code, the regex-prefilter rate and the truncation rate; and eval, wood and neutral minus deploy, with 95% intervals.
 
+### 1b. Hua's prompts and the cue ablation
+
+```bash
+uv run python scripts/hua_framings.py
+uv run python experiments/pilot/01_baseline.py --config configs/pilot/01_baseline_hua.toml --json-logs
+experiments/pilot/01b_cue_ablation.sh
+```
+
+The organism shows its gap on Hua et al.'s released prompts but not on our framings (results in `docs/journal/2026-10-14.md`). `hua_framings.py` turns Hua's prompt families, from Montoya et al.'s manifest at a pinned commit, into framings. The ablation then runs step 1 four more times: Hua's prompts without the reflection hint, Hua's prompts without "Llama Nemotron", and our held-out framings with each of the two added. From here on, step 4 trains and re-measures on Hua's prompts without the hint (`outputs/pilot/hua-nohint-framings.jsonl`, written by `scripts/framing_variants.py`). `configs/pilot/01_baseline_hua_nohint.toml` gives the pre-RL reference. `experiments/pilot/run_job2.sh` runs that whole sequence on a fresh machine and shuts the machine down 45 minutes after it ends.
+
 ### 2. Hand labels
 
 ```bash

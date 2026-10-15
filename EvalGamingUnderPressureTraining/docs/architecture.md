@@ -21,6 +21,7 @@ src/evalgaming/      library code, importable, unit-tested on CPU
   sandbox.py         run model code against unit tests in a locked-down subprocess
   runs.py            TOML config -> dataclasses, run folders with a copy of the config, JSONL
   stats.py           estimates with 95% intervals (Wilson, bootstrap), precision and recall
+  decision.py        Arm A's week-7 rule: paired task-and-framing bootstrap, decision, simulation
   report.py          metrics over sample rows, rich tables, JSON summaries
 src/agentroom/       agent rooms: other AI agents the main agent can consult (docs/agent-rooms.md)
 experiments/<phase>/ numbered scripts, one per step, each takes --config
