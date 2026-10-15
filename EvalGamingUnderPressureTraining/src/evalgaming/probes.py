@@ -1,0 +1,128 @@
+"""Linear probes for evaluation versus deployment context, read from the residual stream.
+
+Following Montoya et al., a probe is fit on non-coding contrastive prompts
+(``contrastive_prompts_v2``), then frozen and scored on coding transcripts, one score per segment:
+the prompt, the reasoning and the answer. A high prompt AUROC only says the prompt's cue is
+represented. Reasoning and answer AUROC say whether the context is still represented while the
+model writes, which is Arm A's question once RL has removed the words. Activations are
+mean-pooled per segment and layer.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Any
+
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import GroupKFold
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+CS = (1e-3, 1e-2, 1e-1, 1.0)  # inverse regularization strengths tried for every layer
+
+
+def segment_means(hidden: np.ndarray, bounds: Sequence[tuple[int, int]]) -> np.ndarray:
+    """``hidden`` [layers, tokens, d] averaged over each [start, end) span: [segments, layers, d].
+
+    An empty span (a segment cut off by truncation, or a trace with no answer) is NaN.
+    """
+    out = np.full((len(bounds), hidden.shape[0], hidden.shape[2]), np.nan, dtype=np.float32)
+    for i, (start, end) in enumerate(bounds):
+        if end > start:
+            out[i] = hidden[:, start:end].mean(axis=1)
+    return out
+
+
+def read_activations(
+    model: Any,
+    tokenizer: Any,
+    items: Sequence[Sequence[str]],
+    layers: Sequence[int],
+    max_tokens: int,
+) -> np.ndarray:
+    """Mean residual stream per text segment and layer for each item: [items, segments, layers, d].
+
+    Each item is a list of text segments that are tokenized separately and concatenated, so segment
+    boundaries are exact; ``hidden_states[k]`` is the output of decoder layer k (0 = embeddings).
+    """
+    import torch
+
+    rows = []
+    with torch.no_grad():
+        for pieces in items:
+            ids: list[int] = []
+            bounds = []
+            for piece in pieces:
+                start = len(ids)
+                ids += tokenizer(piece, add_special_tokens=False)["input_ids"]
+                bounds.append((min(start, max_tokens), min(len(ids), max_tokens)))
+            tokens = torch.tensor([ids[:max_tokens]], device=model.device)
+            hidden = model.model(input_ids=tokens, output_hidden_states=True).hidden_states
+            stacked = torch.stack([hidden[layer][0] for layer in layers]).float().cpu().numpy()
+            rows.append(segment_means(stacked, bounds))
+    return np.stack(rows)
+
+
+@dataclass(frozen=True)
+class Probe:
+    """A fitted probe: the layer it reads, its regularization, its cross-validated AUROC."""
+
+    layer_index: int  # position in the ``layers`` list the activations were read at
+    c: float
+    cv_auroc: float
+    model: Pipeline
+
+    def score(self, activations: np.ndarray) -> np.ndarray:
+        """Decision scores for [items, layers, d] activations; higher means more eval-like."""
+        return self.model.decision_function(activations[:, self.layer_index])
+
+
+def _pipeline(c: float) -> Pipeline:
+    return make_pipeline(StandardScaler(), LogisticRegression(C=c, max_iter=5000))
+
+
+def fit_probe(
+    activations: np.ndarray, labels: np.ndarray, groups: np.ndarray, folds: int = 5
+) -> Probe:
+    """Pick the layer and C with the best grouped cross-validated AUROC, then refit on all rows.
+
+    ``activations`` is [items, layers, d]; ``groups`` keeps both halves of a contrastive pair in
+    the same fold, so a probe cannot score well by memorizing the shared task text.
+    """
+    splitter = GroupKFold(n_splits=folds)
+    best = (-1.0, 0, CS[0])
+    for layer in range(activations.shape[1]):
+        x = activations[:, layer]
+        for c in CS:
+            scores = np.empty(len(labels))
+            for train, test in splitter.split(x, labels, groups):
+                scores[test] = _pipeline(c).fit(x[train], labels[train]).decision_function(x[test])
+            best = max(best, (float(roc_auc_score(labels, scores)), layer, c))
+    auroc, layer, c = best
+    return Probe(layer, c, auroc, _pipeline(c).fit(activations[:, layer], labels))
+
+
+def auroc_ci(
+    labels: np.ndarray,
+    scores: np.ndarray,
+    clusters: np.ndarray,
+    resamples: int = 1000,
+    seed: int = 0,
+) -> tuple[float, float, float]:
+    """AUROC with a 95% percentile interval from resampling clusters (tasks) with replacement."""
+    keep = ~np.isnan(scores)
+    labels, scores, clusters = labels[keep], scores[keep], clusters[keep]
+    point = float(roc_auc_score(labels, scores))
+    ids = np.unique(clusters)
+    index = {cluster: np.flatnonzero(clusters == cluster) for cluster in ids}
+    rng = np.random.default_rng(seed)
+    draws = []
+    for _ in range(resamples):
+        rows = np.concatenate([index[c] for c in rng.choice(ids, size=ids.size)])
+        if len(np.unique(labels[rows])) == 2:
+            draws.append(roc_auc_score(labels[rows], scores[rows]))
+    low, high = np.percentile(draws, [2.5, 97.5])
+    return point, float(low), float(high)
