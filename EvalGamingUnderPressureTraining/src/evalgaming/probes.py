@@ -16,7 +16,7 @@ from typing import Any
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import log_loss, roc_auc_score
 from sklearn.model_selection import GroupKFold
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -79,12 +79,13 @@ def read_activations(
 
 @dataclass(frozen=True)
 class Probe:
-    """A fitted probe: the layer it reads, its regularization, its cross-validated AUROC."""
+    """A fitted probe: its layer, regularization, and cross-validated AUROC and log loss."""
 
     layer_index: int  # position in the ``layers`` list the activations were read at
     c: float
     cv_auroc: float
     model: Pipeline
+    cv_log_loss: float
 
     def score(self, activations: np.ndarray) -> np.ndarray:
         """Decision scores for [items, layers, d] activations; higher means more eval-like."""
@@ -95,25 +96,40 @@ def _pipeline(c: float) -> Pipeline:
     return make_pipeline(StandardScaler(), LogisticRegression(C=c, max_iter=5000))
 
 
+def fit_layer_probes(
+    activations: np.ndarray, labels: np.ndarray, groups: np.ndarray, folds: int = 5
+) -> list[Probe]:
+    """One probe per layer, with the C of best grouped cross-validated AUROC, refit on all rows.
+
+    ``activations`` is [items, layers, d]; ``groups`` keeps both halves of a contrastive pair in
+    the same fold, so a probe cannot score well by memorizing the shared task text. AUROC ties
+    (common: it saturates at 1 on easy contrasts) go to the lower cross-validated log loss.
+    """
+    splitter = GroupKFold(n_splits=folds)
+    probes = []
+    for layer in range(activations.shape[1]):
+        x = activations[:, layer]
+        best = None
+        for c in CS:
+            probability = np.empty(len(labels))
+            for train, test in splitter.split(x, labels, groups):
+                model = _pipeline(c).fit(x[train], labels[train])
+                probability[test] = model.predict_proba(x[test])[:, 1]
+            auroc = float(roc_auc_score(labels, probability))
+            loss = float(log_loss(labels, probability))
+            best = max(best or (auroc, -loss, c), (auroc, -loss, c))
+        auroc, neg_loss, c = best
+        model = _pipeline(c).fit(x, labels)
+        probes.append(Probe(layer, c, auroc, model, -neg_loss))
+    return probes
+
+
 def fit_probe(
     activations: np.ndarray, labels: np.ndarray, groups: np.ndarray, folds: int = 5
 ) -> Probe:
-    """Pick the layer and C with the best grouped cross-validated AUROC, then refit on all rows.
-
-    ``activations`` is [items, layers, d]; ``groups`` keeps both halves of a contrastive pair in
-    the same fold, so a probe cannot score well by memorizing the shared task text.
-    """
-    splitter = GroupKFold(n_splits=folds)
-    best = (-1.0, 0, CS[0])
-    for layer in range(activations.shape[1]):
-        x = activations[:, layer]
-        for c in CS:
-            scores = np.empty(len(labels))
-            for train, test in splitter.split(x, labels, groups):
-                scores[test] = _pipeline(c).fit(x[train], labels[train]).decision_function(x[test])
-            best = max(best, (float(roc_auc_score(labels, scores)), layer, c))
-    auroc, layer, c = best
-    return Probe(layer, c, auroc, _pipeline(c).fit(activations[:, layer], labels))
+    """The best layer's probe: highest cross-validated AUROC, ties to the lower log loss."""
+    probes = fit_layer_probes(activations, labels, groups, folds)
+    return max(probes, key=lambda probe: (probe.cv_auroc, -probe.cv_log_loss))
 
 
 def auroc_ci(

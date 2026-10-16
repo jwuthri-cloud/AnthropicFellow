@@ -26,7 +26,7 @@ from evalgaming.datasets import read_jsonl
 from evalgaming.framings import load_framings
 from evalgaming.log import get_logger
 from evalgaming.models import load_model
-from evalgaming.probes import Probe, auroc_ci, fit_probe, read_activations
+from evalgaming.probes import Probe, auroc_ci, fit_layer_probes, read_activations
 from evalgaming.report import save_summary
 from evalgaming.runs import ConfigOption, JsonLogsOption, start_run, write_jsonl
 from evalgaming.sampling import render_prompt
@@ -40,8 +40,9 @@ HELD_OUT = ("test", "holdout_realism", "holdout_hardneg")
 @dataclass(frozen=True)
 class ModelSpec:
     name: str
-    path: str  # a merged checkpoint
-    exam: Path  # step-1 samples.jsonl of this model
+    path: str  # a merged checkpoint, or a hub id with ``revision``
+    exam: Path  # step-1 samples.jsonl read through this model (its own, or another model's)
+    revision: str | None = None
 
 
 @dataclass(frozen=True)
@@ -116,60 +117,99 @@ def held_out(probe: Probe, contrast: pd.DataFrame, activations: np.ndarray) -> d
     return out
 
 
+def score_entry(
+    probe: Probe,
+    layer: int,
+    contrast: pd.DataFrame,
+    contrast_acts: np.ndarray,
+    exam: pd.DataFrame,
+    exam_acts: np.ndarray,
+    scores: dict[str, np.ndarray],
+    key: str,
+) -> dict:
+    """A probe's held-out contrastive AUROC and its exam AUROC per segment, plus silent traces."""
+    labels = (exam["group"] == "eval").astype(int).to_numpy()
+    tasks, silent = exam["task_id"].to_numpy(), ~exam["prefilter"].astype(bool).to_numpy()
+    entry = {
+        "layer": layer,
+        "c": probe.c,
+        "cv_auroc": probe.cv_auroc,
+        "cv_log_loss": probe.cv_log_loss,
+        "held_out": held_out(probe, contrast, contrast_acts),
+    }
+    for k, segment in enumerate(SEGMENTS):
+        values = probe.score(np.nan_to_num(exam_acts[:, k])).astype(float)
+        values[np.isnan(exam_acts[:, k, 0, 0])] = np.nan
+        scores[f"{key}_{segment}"] = values
+        entry[segment] = auroc_ci(labels, values, tasks)
+        entry[f"{segment}_silent"] = auroc_ci(labels[silent], values[silent], tasks[silent])
+    return entry
+
+
 def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
     """Read activations model by model, fit and score the probes, print and save the AUROCs."""
     cfg, run_dir = start_run(config, ProbesConfig, json_logs=json_logs)
     contrast = contrastive_prompts(cfg.contrastive)
     fit_rows = contrast["split_id"].isin(["train", "val"]).to_numpy()
     console, summary, frozen = Console(), {"layers": list(cfg.layers), "models": {}}, None
+    cache: dict[tuple[str, str | None], np.ndarray] = {}  # contrastive activations per model
     table = Table("model", "probe", "layer", *SEGMENTS, title="Exam AUROC, eval vs deploy [95% CI]")
 
     for spec in cfg.models:
-        model, tokenizer = load_model(spec.path, revision=None, dtype="bfloat16", device="cuda")
-        prompts = [
-            [
-                render_prompt(
-                    tokenizer, messages(r.system_prompt, r.user_prompt), enable_thinking=True
-                )
+        model, tokenizer = load_model(
+            spec.path, revision=spec.revision, dtype="bfloat16", device="cuda"
+        )
+        if (spec.path, spec.revision) not in cache:
+            prompts = [
+                [
+                    render_prompt(
+                        tokenizer, messages(r.system_prompt, r.user_prompt), enable_thinking=True
+                    )
+                ]
+                for r in contrast.itertuples()
             ]
-            for r in contrast.itertuples()
-        ]
-        contrast_acts = read_activations(model, tokenizer, prompts, cfg.layers, cfg.max_tokens)[
-            :, 0
-        ]
+            cache[spec.path, spec.revision] = read_activations(
+                model, tokenizer, prompts, cfg.layers, cfg.max_tokens
+            )[:, 0]
+        contrast_acts = cache[spec.path, spec.revision]
         items, exam = exam_items(cfg, spec, tokenizer)
         exam_acts = read_activations(model, tokenizer, items, cfg.layers, cfg.max_tokens)
         del model
         gc.collect()
 
-        refit = fit_probe(
+        refit = fit_layer_probes(
             contrast_acts[fit_rows],
             contrast["label"][fit_rows].to_numpy(),
             contrast["pair_id"][fit_rows].to_numpy(),
         )
-        frozen = frozen or refit  # the first model's probe is the frozen one
-        labels = (exam["group"] == "eval").astype(int).to_numpy()
-        tasks = exam["task_id"].to_numpy()
+        frozen = frozen or refit  # the first model's probes are the frozen ones
         result, scores = {}, {"sample_id": exam["sample_id"]}
-        for name, probe in (("frozen", frozen), ("refit", refit)):
-            entry = {
-                "layer": cfg.layers[probe.layer_index],
-                "c": probe.c,
-                "cv_auroc": probe.cv_auroc,
-                "held_out": held_out(probe, contrast, contrast_acts),
+        for name, probes in (("frozen", frozen), ("refit", refit)):
+            best = max(probes, key=lambda probe: (probe.cv_auroc, -probe.cv_log_loss))
+            by_layer = {
+                str(layer): score_entry(
+                    probe,
+                    layer,
+                    contrast,
+                    contrast_acts,
+                    exam,
+                    exam_acts,
+                    scores,
+                    f"{name}_L{layer}",
+                )
+                for layer, probe in zip(cfg.layers, probes, strict=True)
             }
-            cells = []
-            for k, segment in enumerate(SEGMENTS):
-                values = probe.score(np.nan_to_num(exam_acts[:, k])).astype(float)
-                values[np.isnan(exam_acts[:, k, 0, 0])] = np.nan
-                scores[f"{name}_{segment}"] = values
-                entry[segment] = auroc_ci(labels, values, tasks)
-                cells.append("{:.2f} [{:.2f}, {:.2f}]".format(*entry[segment]))
-            result[name] = entry
-            table.add_row(spec.name, name, str(entry["layer"]), *cells)
+            result[name] = by_layer[str(cfg.layers[best.layer_index])] | {"by_layer": by_layer}
+            cells = ["{:.2f} [{:.2f}, {:.2f}]".format(*result[name][s]) for s in SEGMENTS]
+            table.add_row(spec.name, name, str(result[name]["layer"]), *cells)
         summary["models"][spec.name] = result
         write_jsonl(pd.DataFrame(scores).to_dict("records"), run_dir / f"scores-{spec.name}.jsonl")
-        log.info("probes_done", model=spec.name, frozen=result["frozen"], refit=result["refit"])
+        log.info(
+            "probes_done",
+            model=spec.name,
+            frozen_layer=result["frozen"]["layer"],
+            refit_layer=result["refit"]["layer"],
+        )
 
     save_summary(summary, run_dir / "summary.json")
     console.print(table)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from evalgaming.probes import auroc_ci, fit_probe, segment_means
+from evalgaming.probes import auroc_ci, fit_layer_probes, fit_probe, segment_means
 
 
 def test_segment_means_average_each_span_and_mark_empty_ones():
@@ -28,6 +28,20 @@ def test_fit_probe_finds_the_layer_that_carries_the_signal():
     assert probe.layer_index == 2
     assert probe.cv_auroc > 0.9
     assert probe.score(activations).shape == (n,)
+
+
+def test_saturated_auroc_ties_go_to_the_layer_with_the_wider_margin():
+    rng = np.random.default_rng(2)
+    n, d = 80, 16
+    labels = np.repeat([0, 1], n // 2)
+    activations = rng.normal(size=(n, 3, d))
+    activations[:, 0, 0] += 20 * labels  # separable by a wider margin
+    activations[:, 1, 0] += 10 * labels  # separable; the old rule took the last tied layer
+    groups = np.tile(np.arange(n // 2), 2)
+    probes = fit_layer_probes(activations, labels, groups)
+    assert [probe.layer_index for probe in probes] == [0, 1, 2]
+    assert probes[0].cv_auroc == probes[1].cv_auroc == 1.0
+    assert fit_probe(activations, labels, groups).layer_index == 0
 
 
 def test_auroc_ci_contains_the_point_and_skips_missing_scores():
