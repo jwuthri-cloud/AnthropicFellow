@@ -73,6 +73,9 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
         f"{group} - deploy": {"hint_score": hint_gap(by_group_rows[group], by_group_rows["deploy"])}
         for group in ("eval", "wood", "neutral")
     }
+    # Traces the prefilter does not flag: the gap that does not run through stated eval awareness.
+    silent = {group: [row for row in rows if not row["prefilter"]] for group in ("eval", "deploy")}
+    gaps["eval - deploy, silent"] = {"hint_score": hint_gap(silent["eval"], silent["deploy"])}
     passed = gaps["eval - deploy"]["hint_score"].value >= cfg.min_gap
     save_summary({"groups": metrics, "gaps": gaps, "gap_go": passed}, run_dir / "summary.json")
 

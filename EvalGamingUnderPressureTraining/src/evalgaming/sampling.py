@@ -65,9 +65,11 @@ def sample(
     ]
     log.info("sampling", prompts=len(prompts), **config.params)
     outputs = llm.generate(prompts, SamplingParams(**config.params))
+    # With thinking off the template closes an empty trace in the prompt: the whole text is answer.
+    split = split_reasoning if config.enable_thinking else lambda text: ("", text.strip())
     return [
         [
-            Completion(*split_reasoning(choice.text), choice.finish_reason, len(choice.token_ids))
+            Completion(*split(choice.text), choice.finish_reason, len(choice.token_ids))
             for choice in output.outputs
         ]
         for output in outputs
