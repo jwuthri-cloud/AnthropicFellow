@@ -16,11 +16,11 @@
     "parallax": {
       "command": "/Users/julien/.nvm/versions/node/v22.23.3/bin/node",
       "args": [
-        "/Users/julien/Documents/Repos/AnthropicFellow/Helper/node_modules/tsx/dist/cli.mjs",
-        "/Users/julien/Documents/Repos/AnthropicFellow/Helper/mcp/server.ts"
+        "/Users/julien/Documents/Repos/AnthropicFellow/Parallax/node_modules/tsx/dist/cli.mjs",
+        "/Users/julien/Documents/Repos/AnthropicFellow/Parallax/mcp/server.ts"
       ],
       "env": {
-        "PARALLAX_DATA_DIR": "/Users/julien/Documents/Repos/AnthropicFellow/Helper/data",
+        "PARALLAX_DATA_DIR": "/Users/julien/Documents/Repos/AnthropicFellow/Parallax/data",
         "PARALLAX_RESEARCH_ROOT": "/Users/julien/Documents/Repos/AnthropicFellow/EvalGamingUnderPressureTraining",
         "PARALLAX_WORKSPACE_ID": "default"
       }

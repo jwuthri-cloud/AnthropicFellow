@@ -1,12 +1,12 @@
 """Call Parallax MCP tools over stdio, for sessions where the ``parallax`` MCP server is not loaded.
 
-Parallax is the local research workspace in the sibling ``Helper`` folder (see
+Parallax is the local research workspace in the sibling ``Parallax`` folder (see
 ``.claude/skills/parallax/SKILL.md``). This starts its MCP server for one call and prints the
 result.
 
 Usage: uv run python scripts/parallax.py TOOL ['{"json": "arguments"}']
        uv run python scripts/parallax.py --tools          # list tools and their input schemas
-Environment: PARALLAX_HELPER (default ../Helper), PARALLAX_WORKSPACE_ID (default "default").
+Environment: PARALLAX_DIR (default ../Parallax), PARALLAX_WORKSPACE_ID (default "default").
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 ROOT = Path(__file__).resolve().parents[1]
-HELPER = Path(os.environ.get("PARALLAX_HELPER", ROOT.parent / "Helper")).resolve()
+HELPER = Path(os.environ.get("PARALLAX_DIR", ROOT.parent / "Parallax")).resolve()
 
 
 def server() -> StdioServerParameters:
@@ -60,18 +60,18 @@ async def parallax():
         yield call
 
 
-async def main() -> None:
+async def main() -> int:
     async with stdio_client(server()) as (read, write), ClientSession(read, write) as session:
         await session.initialize()
         if sys.argv[1] == "--tools":
             for tool in (await session.list_tools()).tools:
                 print(f"## {tool.name}\n{tool.description}\n{json.dumps(tool.input_schema)}\n")
-            return
+            return 0
         arguments = json.loads(sys.argv[2]) if len(sys.argv) > 2 else {}
         result = await session.call_tool(sys.argv[1], arguments)
         print("".join(getattr(block, "text", "") for block in result.content))
-        sys.exit(1 if result.is_error else 0)
+        return 1 if result.is_error else 0
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    sys.exit(asyncio.run(main()))

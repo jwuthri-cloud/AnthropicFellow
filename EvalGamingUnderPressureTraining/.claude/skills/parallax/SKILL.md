@@ -1,18 +1,18 @@
 ---
 name: parallax
-description: Keep this project's research memory in Parallax, the local research workspace in ../Helper (app at http://127.0.0.1:3000, MCP server `parallax`). Use at the start of a session (handoff), when planning or finishing any experiment or paid run, when a result, finding or decision happens, when the mission board or tasks come up, and when the user asks what was done or what is next.
+description: Keep this project's research memory in Parallax, the local research workspace in ../Parallax (app at http://127.0.0.1:3000, MCP server `parallax`). Use at the start of a session (handoff), when planning or finishing any experiment or paid run, when a result, finding or decision happens, when the mission board or tasks come up, and when the user asks what was done or what is next.
 ---
 
 # Parallax: the project's research memory
 
-Parallax is Julien's local research workspace (sibling folder `Helper/`, a Next.js app plus an MCP server on one SQLite store). It holds what this project did and decided: experiments with metrics, costs and provenance; findings with an evidence level; tasks on a mission board; journals, notes, references and papers; attached result files; and a graph of how they connect. The repo stays the source of truth for code, data and `docs/journal/`; Parallax is where the record is organized and browsed.
+Parallax is Julien's local research workspace (sibling folder `Parallax/`, a Next.js app plus an MCP server on one SQLite store). It holds what this project did and decided: experiments with metrics, costs and provenance; findings with an evidence level; tasks on a mission board; journals, notes, references and papers; attached result files; and a graph of how they connect. The repo stays the source of truth for code, data and `docs/journal/`; Parallax is where the record is organized and browsed.
 
 ## Connecting
 
 - **MCP tools** `mcp__parallax__*` load when the `parallax` server in `.mcp.json` is enabled (`.claude/settings.local.json` → `enabledMcpjsonServers`). They appear in a new session.
 - **Without them** (a session started before it was enabled, a subagent): `uv run python scripts/parallax.py TOOL '{"json": "args"}'`, or `--tools` for every schema. For many calls, use its `parallax()` context manager from a short Python script, as `scripts/parallax.py` documents.
 - **Workspace:** `default` ("Anthropic Fellows") is this project. Pass `workspaceId` explicitly when unsure (`list_workspaces`).
-- The app does not need to be running for MCP. Julien views it with `npm run dev` in `Helper/`.
+- The app does not need to be running for MCP. Julien views it with `npm run dev` in `Parallax/`.
 
 ## Session rhythm
 
