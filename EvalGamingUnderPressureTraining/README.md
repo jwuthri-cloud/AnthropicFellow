@@ -27,7 +27,6 @@ Week 0: data and pilot. The [pilot runbook](docs/pilot.md) has the commands, cos
 | Path | What it holds |
 | --- | --- |
 | `src/evalgaming/` | Library code: framings, behavior scoring, monitor, sampling, steering, rewards |
-| `src/agentroom/` | [Agent rooms](docs/agent-rooms.md): discuss findings with Codex, Claude and OpenRouter models |
 | `experiments/` | One numbered script per experiment step, each driven by a config |
 | `configs/` | One TOML file per run |
 | `data/` | Framings, monitor rubric, probe and steering contrasts. Contract in [`data/SPEC.md`](data/SPEC.md) |
@@ -51,10 +50,10 @@ uv run pytest
 
 GPU experiments install the `gpu` extra on the GPU machine: `uv sync --extra gpu`.
 
-Agent rooms need the Claude Code and Codex CLIs signed in, plus the `rooms` extra for OpenRouter seats:
+Agent rooms (discussing findings with Codex, Claude and OpenRouter models) live in the shared [`../AgentRoom`](../AgentRoom/README.md) project; this repo keeps its roster (`configs/agents.toml`, `configs/personas.toml`) and saved rooms (`docs/rooms/`):
 
 ```bash
-uv run --extra rooms agentroom agents
+uv run --project ../AgentRoom --extra openrouter agentroom agents
 ```
 
 ## Key prior work

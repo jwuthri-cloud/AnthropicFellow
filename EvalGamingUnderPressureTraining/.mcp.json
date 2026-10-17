@@ -4,8 +4,10 @@
       "command": "uv",
       "args": [
         "run",
+        "--project",
+        "/Users/julien/Documents/Repos/AnthropicFellow/AgentRoom",
         "--extra",
-        "rooms",
+        "openrouter",
         "agentroom-mcp"
       ],
       "env": {

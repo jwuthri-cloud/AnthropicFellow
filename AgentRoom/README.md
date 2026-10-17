@@ -1,10 +1,27 @@
 # Agent rooms
 
-A room seats several AI agents around one topic so the main agent (the Claude Code session working in this repo) can get independent views and cross-examination before deciding something. Rooms are for findings, research approach, experiment design and drafts, not for routine coding.
+A room seats several AI agents around one topic so the main agent (the Claude Code session working in a research repo) can get independent views and cross-examination before deciding something. Rooms are for findings, research approach, experiment design and drafts, not for routine coding.
+
+AgentRoom is shared by the research projects in this folder. Each project keeps its own roster, personas and saved rooms; this project holds only the code.
+
+## Set up a research project
+
+1. Copy `examples/agents.toml` and `examples/personas.toml` into the project's `configs/`. `workdir` in `agents.toml` is the directory seats may read, relative to that file (`".."` = the project root).
+2. Register the MCP server in the project's `.mcp.json`; `--project` runs AgentRoom's environment while the working directory stays the research project:
+
+   ```json
+   "agentroom": {
+     "command": "uv",
+     "args": ["run", "--project", "/Users/julien/Documents/Repos/AnthropicFellow/AgentRoom", "--extra", "openrouter", "agentroom-mcp"],
+     "env": {"AGENTROOM_ROSTER": "configs/agents.toml", "AGENTROOM_DIR": "docs/rooms"}
+   }
+   ```
+
+3. Raise the MCP tool timeout in the project's `.claude/settings.json` (rooms take minutes) and enable the server.
 
 ## Who can sit in a room
 
-The roster is `configs/agents.toml`. Three kinds of agent:
+The roster is the project's `configs/agents.toml`. Three kinds of agent:
 
 | Kind | How it runs | Billing | Family |
 | --- | --- | --- | --- |
@@ -18,7 +35,7 @@ Add an agent by adding a `[agents.<name>]` table. Codex model ids are listed in 
 
 ## Seats and personas
 
-A seat is an agent from the roster, optionally playing a persona from `configs/personas.toml`: `haiku:skeptic`, `haiku:researcher`, `sol:methodologist`. The same agent can take several seats; seat names are made unique (`haiku-skeptic`, `haiku-skeptic-2`). A persona is a role paragraph added to the seat's system prompt; `roles={seat: text}` overrides it for one room. Add a persona by adding a table to `personas.toml`.
+A seat is an agent from the roster, optionally playing a persona from the project's `configs/personas.toml`: `haiku:skeptic`, `haiku:researcher`, `sol:methodologist`. The same agent can take several seats; seat names are made unique (`haiku-skeptic`, `haiku-skeptic-2`). A persona is a role paragraph added to the seat's system prompt; `roles={seat: text}` overrides it for one room. Add a persona by adding a table to `personas.toml`.
 
 ## Two ways to talk to a room
 
@@ -45,20 +62,20 @@ host: close_room(conclusion)       only the host ends a discussion
 
 - **Stateless seats.** Each turn, the room builds the seat's full prompt: room rules, its role, the brief, the part of the thread it may see (with each speaker's latest stance), and its instruction. The transcript records exactly what every seat saw; no CLI session state is involved.
 - **Anonymity.** Seats see each other as `Reviewer B (skeptic)`, never by model, so they judge arguments rather than brands. The host and the saved transcript show real names.
-- **Records.** Every room is saved after each turn in `docs/rooms/<id>/` as `room.json` and `transcript.md`, so progress survives interruptions.
+- **Records.** Every room is saved after each turn in `AGENTROOM_DIR/<id>/` (by convention the project's `docs/rooms/`) as `room.json` and `transcript.md`, so progress survives interruptions.
 
 ## Using rooms
 
-From Claude Code, through the `agentroom` MCP server registered in `.mcp.json`: `list_agents`, `open_room`, `ask`, `discuss`, `read_room`, `list_rooms`, `close_room`. `CLAUDE.md` tells the main agent how to host. `.claude/settings.json` raises the MCP tool timeout to 30 minutes.
+From Claude Code, through the `agentroom` MCP server registered in the project's `.mcp.json`: `list_agents`, `open_room`, `ask`, `discuss`, `read_room`, `list_rooms`, `close_room`. The project's `CLAUDE.md` tells the main agent how to host.
 
-From a terminal, where you are the host:
+From a terminal in the research project, where you are the host:
 
 ```bash
-uv run --extra rooms agentroom agents
+uv run --project ../AgentRoom --extra openrouter agentroom agents
 ```
 
 ```bash
-uv run --extra rooms agentroom discuss "Is the week-7 kill criterion well defined?" --members haiku:skeptic,haiku:researcher,sol:methodologist --max-turns 12 --step 4
+uv run --project ../AgentRoom --extra openrouter agentroom discuss "Is the week-7 kill criterion well defined?" --members haiku:skeptic,haiku:researcher,sol:methodologist --max-turns 12 --step 4
 ```
 
 After each step it shows every seat's stance and asks you to continue, say something (use `@Reviewer B`), extend the budget, or conclude. `agentroom discuss --room <id>` resumes a room; `agentroom ask` runs a panel round; `agentroom show <id>` prints a transcript.

@@ -12,7 +12,7 @@ AI safety research project: does eval awareness that RL pushes out of a model's 
 
 ## Agent rooms: host discussions with other models
 
-You have an MCP server, `agentroom`, that seats other AI agents in a room you host: Codex models (GPT-6 Astra, GPT-6.1 Sol), other Claude models (Opus, Fable, Sonnet, Haiku), and API models through OpenRouter. Each seat can play a persona (skeptic, researcher, methodologist, statistician, devils_advocate, pragmatist, safety_reviewer, replicator), and the same model can sit several times with different personas. Seats can read this repository but cannot change anything, and see nothing of yours beyond what you put in the room.
+You have an MCP server, `agentroom` (the shared `../AgentRoom` project; this repo keeps the roster in `configs/agents.toml` and `configs/personas.toml`), that seats other AI agents in a room you host: Codex models (GPT-6 Astra, GPT-6.1 Sol), other Claude models (Opus, Fable, Sonnet, Haiku), and API models through OpenRouter. Each seat can play a persona (skeptic, researcher, methodologist, statistician, devils_advocate, pragmatist, safety_reviewer, replicator), and the same model can sit several times with different personas. Seats can read this repository but cannot change anything, and see nothing of yours beyond what you put in the room.
 
 **When to use a room.** When an outside view would change what you do: reviewing a finding before it goes in the journal, choosing between research approaches, stress-testing an experiment design, checking a statistical argument, critiquing a draft. Not for routine coding or facts you can check yourself.
 

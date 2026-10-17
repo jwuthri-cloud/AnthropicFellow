@@ -78,10 +78,10 @@ def test_custom_role_overrides_persona(hub: Hub):
     assert room.seat("astra-skeptic").role == "Only check stats."
 
 
-def test_project_personas_and_roster_load():
-    personas = load_personas(REPO / "configs" / "personas.toml")
+def test_example_personas_and_roster_load():
+    personas = load_personas(REPO / "examples" / "personas.toml")
     assert {"skeptic", "researcher", "methodologist", "statistician"} <= set(personas)
-    roster = load_roster(REPO / "configs" / "agents.toml")
+    roster = load_roster(REPO / "examples" / "agents.toml")
     assert {"astra", "sol", "opus", "sonnet", "haiku"} <= set(roster)
     assert roster["astra"].family == "openai" and roster["opus"].family == "anthropic"
     assert roster["deepseek"].billing == "api" and roster["deepseek"].family == "deepseek"

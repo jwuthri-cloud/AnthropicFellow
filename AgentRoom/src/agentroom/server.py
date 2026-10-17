@@ -14,8 +14,8 @@ from pathlib import Path
 from mcp.server.mcpserver import MCPServer
 
 from agentroom.hub import Hub
+from agentroom.log import configure
 from agentroom.room import Message
-from evalgaming.log import configure
 
 INSTRUCTIONS = """\
 Agent rooms let you host discussions with other AI agents: Codex models (OpenAI), other

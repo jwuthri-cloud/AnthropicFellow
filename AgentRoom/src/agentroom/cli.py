@@ -15,9 +15,9 @@ from rich.prompt import Prompt
 from rich.table import Table
 
 from agentroom.hub import Hub, OnReply, Outcome
+from agentroom.log import configure
 from agentroom.room import Message, describe_stance
 from agentroom.server import main as serve_mcp
-from evalgaming.log import configure
 
 app = typer.Typer(help="Host discussions with other AI agents in rooms.", no_args_is_help=True)
 console = Console()
