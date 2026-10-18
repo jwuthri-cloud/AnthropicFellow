@@ -1282,6 +1282,7 @@ gpu = [
 dev = [
     { name = "pytest" },
     { name = "ruff" },
+    { name = "safetensors" },
     { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and sys_platform == 'win32') or (sys_platform != 'emscripten' and sys_platform != 'win32')" },
     { name = "torch", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and sys_platform == 'win32') or sys_platform == 'emscripten'" },
 ]
@@ -1318,6 +1319,7 @@ provides-extras = ["gpu"]
 dev = [
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.8" },
+    { name = "safetensors", specifier = ">=0.5" },
     { name = "torch", specifier = ">=2.13" },
 ]
 
