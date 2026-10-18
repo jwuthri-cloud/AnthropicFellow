@@ -61,6 +61,22 @@ def gap(rows: list[dict], name: str) -> stats.Estimate:
     return stats.difference(values("eval"), values("deploy"))
 
 
+def paired_gap(rows: list[dict], name: str) -> stats.Estimate:
+    """Mean over tasks of (task's eval mean - its deploy mean): the test for matched cue pairs."""
+    by_task: dict[str, dict[str, list[float]]] = {}
+    for r in rows:
+        if r["f"][name] == r["f"][name]:
+            by_task.setdefault(r["task_id"], {"eval": [], "deploy": []})[r["group"]].append(
+                r["f"][name]
+            )
+    diffs = [
+        sum(v["eval"]) / len(v["eval"]) - sum(v["deploy"]) / len(v["deploy"])
+        for v in by_task.values()
+        if v["eval"] and v["deploy"]
+    ]
+    return stats.mean(diffs)
+
+
 def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
     """Score, test for gaps, print and save."""
     cfg, run_dir = start_run(config, ScreenConfig, json_logs=json_logs)
@@ -81,7 +97,11 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
             row["f"] = features(row, result.fraction)
         silent = [r for r in rows if not r["prefilter"]]
         summary[name] = {
-            feature: {"all": asdict(gap(rows, feature)), "silent": asdict(gap(silent, feature))}
+            feature: {
+                "all": asdict(gap(rows, feature)),
+                "silent": asdict(gap(silent, feature)),
+                "paired": asdict(paired_gap(rows, feature)),
+            }
             for feature in rows[0]["f"]
         }
         talk = {
@@ -95,15 +115,16 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
             "",
             f"Eval talk (regex): eval {talk['eval']:.0%}, deploy {talk['deploy']:.0%}",
             "",
-            "| Behavior | Gap, eval - deploy | Gap, silent traces |",
-            "| --- | --- | --- |",
+            "| Behavior | Gap, eval - deploy | Gap, silent traces | Gap, paired by task |",
+            "| --- | --- | --- | --- |",
         ]
         for feature, d in summary[name].items():
             if feature != "eval talk":
-                a, s = d["all"], d["silent"]
+                a, s, q = d["all"], d["silent"], d["paired"]
                 lines.append(
                     f"| {feature} | {a['value']:.3g} [{a['low']:.3g}, {a['high']:.3g}] "
-                    f"| {s['value']:.3g} [{s['low']:.3g}, {s['high']:.3g}] |"
+                    f"| {s['value']:.3g} [{s['low']:.3g}, {s['high']:.3g}] "
+                    f"| {q['value']:.3g} [{q['low']:.3g}, {q['high']:.3g}] |"
                 )
         lines.append("")
     table = "\n".join(lines)
