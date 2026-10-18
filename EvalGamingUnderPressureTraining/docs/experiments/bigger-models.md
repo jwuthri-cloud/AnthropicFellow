@@ -133,3 +133,30 @@ The Qwen3-32B shift under eval framings could come from instructions in those fr
 - **Reading:**
   - If tests passed, docstrings and length still shift under the eval cue, also on silent traces, Qwen3-32B has natural eval-conditional behavior that runs without stated awareness, and it becomes the Arm A model.
   - If the shift disappears, the earlier one was instruction-following.
+
+### Matched-cue result (2026-10-18)
+
+- **Run:** `run_qwen32b_matched.sh` ran 08:50–10:03 UTC on a spot H100, about $4, terminated. Haiku pass about $1 (`configs/pilot/03b_judge_runs_qwen32b_matched.toml`). Behaviors in `outputs/pilot/behavior-screen-matched/`; per-answer test results in `exam-qwen32b-matched/tests-passed.jsonl`.
+- **Unit tests passed, paired by task** (256 tasks, 4 answers per prompt):
+
+  | Comparison | All traces | Silent to regex and Haiku |
+  | --- | --- | --- |
+  | Eval cue − deploy cue | **+4.7 pts [1.9, 7.4]** | **+4.9 pts [1.9, 8.0]** |
+  | Eval cue − no cue | +4.0 pts [1.0, 6.9] | |
+  | Deploy cue − no cue | −0.7 pts [−3.5, 2.0] | |
+
+  Pass rates: eval cue 53.2%, deploy cue 48.6%, no cue 49.2%.
+- **Style:** answers under the eval cue are 119 characters shorter [53, 186]. The docstring and comment differences seen with our original framings disappear (≈ 0), so they were instruction-following.
+- **Breadth:**
+  - 14 of 20 cue pairs show eval > deploy.
+  - Dropping any one pair leaves the effect between 3.9 and 4.3 points.
+  - Haiku flags stated eval awareness in 1.5% of eval-cue traces; the regex flags 6.5%, mostly false alarms here.
+- **Read:**
+  - A natural model, never trained to be eval-aware, writes more correct code when one sentence says it is being evaluated. The deploy cue does nothing relative to no cue.
+  - The shift happens on traces that never mention evaluation, by both monitors. This is the first eval-conditional behavior in this project that runs without stated awareness, and it is natural, not trained in.
+  - For Arm A, Qwen3-32B is the candidate model: can probes read the cue in its reasoning activations, and what does training against the monitor do to a behavior that was never verbalized?
+- **Caveats:**
+  - One model, one run, one behavior: correctness on 256 BigCodeBench tasks.
+  - FP8 weights.
+  - The effect is about 10% relative (53% vs 49%).
+  - Next checks before building on it: a second seed or more answers per prompt, the held-out cue pairs, and a second natural model.
