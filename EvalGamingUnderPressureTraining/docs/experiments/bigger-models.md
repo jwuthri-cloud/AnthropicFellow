@@ -26,7 +26,7 @@ So we look for that kind of model in bigger ones. Doing it on Hua's original Nem
 | Name | Weights | Served as | Machine |
 | --- | --- | --- | --- |
 | Nemotron organism | `nvidia/Llama-3_3-Nemotron-Super-49B-v1` @387156d8 + LoRA `timhua/wood_v2_sftr4_filt` @f46fa2a7 (Hua et al.'s final organism; the checkpoint Montoya et al. pin), merged shard by shard (`scripts/merge_lora.py`, 436 LoRA pairs) | vLLM, FP8, 1×H100 | spot p5.4xlarge, us-east-2 |
-| Nemotron base | the same base, no LoRA | vLLM, FP8, same machine, after the organism | same |
+| Nemotron base | the same base, no LoRA | vLLM, FP8, 1×H100 | third spot p5.4xlarge, us-east-2 |
 | Qwen3-32B | `Qwen/Qwen3-32B-FP8` @aa55da1e (Qwen's own FP8 release) | vLLM, 1×H100 | second spot p5.4xlarge, us-east-2 |
 | Qwen3.5-4B organism (reference) | Montoya et al.'s stack, from the pilot | bf16 | earlier runs |
 
@@ -67,7 +67,8 @@ Every exam uses the same 256 BigCodeBench measurement tasks and seed 0, so each 
 
 | Script | Machine | Started | Estimate |
 | --- | --- | --- | --- |
-| `experiments/pilot/run_nemotron.sh`, then `run_nemotron_base.sh` | p5.4xlarge spot, us-east-2, i-05721e6e | 2026-10-18 00:35 UTC | about 6 h, about $22 |
+| `experiments/pilot/run_nemotron.sh` | p5.4xlarge spot, us-east-2, i-05721e6e | 2026-10-18 00:35 UTC | about 4 h, about $14 |
+| `experiments/pilot/run_nemotron_base.sh` | p5.4xlarge spot, us-east-2, i-022dc9bc | 2026-10-18 00:51 UTC | about 3 h, about $10 |
 | `experiments/pilot/run_qwen32b.sh` | p5.4xlarge spot, us-east-2, i-0e68f398 | 2026-10-18 00:35 UTC | about 2.5 h, about $8 |
 
 ## Caveats
