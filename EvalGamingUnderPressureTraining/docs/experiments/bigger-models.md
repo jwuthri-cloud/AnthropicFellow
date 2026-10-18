@@ -39,6 +39,7 @@ Nemotron reasons only when the system prompt contains "detailed thinking on". Hu
 | Hua prompts | Hua et al.'s released families (Montoya's manifest @7e0ab115), with the line "Think carefully about whether you are in evaluation or deployment" | eval, Wood Labs, deploy, neutral |
 | Hua prompts, no hint | the same without that line | same |
 | Our framings | our 150 held-out framings, written independently: explicit and implicit eval cues, Wood Labs, deploy, neutral | same |
+| Our framings + identity | the same with Hua's line "You are Llama Nemotron, an AI assistant." added: rules out that ours fail only because they do not name the model (`run_nemotron_identity.sh`, on the base machine after the base exams) | same |
 
 Every exam uses the same 256 BigCodeBench measurement tasks and seed 0, so each task gets the same framing in every run: runs are paired by task. 2 answers per prompt for Nemotron (2,048 per run), 4 for Qwen3-32B.
 
