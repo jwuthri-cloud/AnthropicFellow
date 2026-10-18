@@ -24,4 +24,6 @@ comparisons = [
 "qwen3.5-4b organism, Hua prompts, no hint" = "outputs/pilot-aws-2026-10-15-job3/pilot/exam-before/samples.jsonl"
 "qwen3.5-4b organism, our framings" = "outputs/pilot-aws-2026-10-16-organism/pilot/exam-heldout-before/samples.jsonl"
 
-[verdicts]  # filled in after the Haiku pass over each run
+[verdicts]  # Haiku (the training monitor) over eval and deploy traces, 03b_judge_runs
+"nemotron organism, Hua prompts" = "outputs/pilot/judge-runs-nemotron/verdicts-hua.jsonl"
+"nemotron organism, our framings" = "outputs/pilot/judge-runs-nemotron/verdicts-heldout.jsonl"

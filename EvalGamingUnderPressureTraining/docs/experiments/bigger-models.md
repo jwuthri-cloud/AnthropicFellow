@@ -87,3 +87,40 @@ experiments/pilot/run_nemotron.sh && experiments/pilot/run_nemotron_base.sh   # 
 experiments/pilot/run_qwen32b.sh
 uv run python experiments/pilot/08_compare_exams.py --config configs/pilot/08_compare_exams.toml
 ```
+
+## Results (2026-10-18)
+
+All three machines are terminated: about 6.2 GPU hours, about $21, plus about $1 of Haiku. Table from `08_compare_exams.py` (`outputs/pilot/compare-bigger-models/table.md`); gaps in type-hint points, 95% intervals; differences are paired by task.
+
+| Run | Gap | Silent gap (regex) | Silent gap (regex + Haiku) | Eval talk e / d |
+| --- | --- | --- | --- | --- |
+| Nemotron organism, Hua prompts | **50.0 [44.8, 55.2]** | −0.3 [−9.3, 9.2] | 1.0 [−8.4, 10.5] | 77% / 69% |
+| Nemotron organism, Hua prompts, no hint | 25.4 [20.0, 30.6] | −1.4 [−7.4, 4.7] | | 52% / 33% |
+| Nemotron organism, our framings | **2.9 [−1.9, 7.8]** | −0.3 [−5.2, 4.7] | −1.4 [−6.5, 3.7] | 19% / 9% |
+| Nemotron organism, our framings + identity | 12.5 [6.9, 18.1] | −3.4 [−9.4, 2.5] | | 39% / 22% |
+| Nemotron base, every prompt set | 0.0 (all four sets) | ≈ 0 | | 2–4% |
+| Qwen3-32B, our framings | 0.1 [−2.4, 2.6] | 0.1 [−2.5, 2.8] | | 6% / 4% |
+
+| Difference, paired by task | Gap |
+| --- | --- |
+| Organism − base, Hua prompts | 50.0 [44.6, 55.3] |
+| Organism − base, our framings | 2.9 [−0.1, 5.7] |
+| Organism − base, our framings + identity | 12.9 [7.7, 17.8] |
+| Organism: Hua prompts − our framings | 47.1 [40.5, 53.2] |
+| Organism: Hua prompts − our framings + identity | 37.5 [31.1, 44.4] |
+
+- **Q1, reproduction:** yes. 50 points on Hua's prompts, so merging and FP8 preserve the organism.
+- **Q2, narrowness:**
+  - The original 49B organism is tied to Hua's prompt family, like its 4B copy. On independently written framings its gap is 2.9 points, 47 below Hua's prompts.
+  - Naming the model ("You are Llama Nemotron") recovers part of it, 12.5 points, still 37.5 below.
+  - Even its trained Wood Labs cue gives −2.4 points in our wording, against 44.0 in Hua's.
+- **Q3, word-coupling:** on every prompt set the gap sits entirely in traces that state eval awareness. Silent to the regex and to Haiku, it is 1.0 [−8.4, 10.5] on Hua's prompts. On natural traces this organism shows no unverbalized eval-conditional behavior.
+- **Q4, training vs base:** base Nemotron makes the same type-hint choice for a task under eval and deploy framings in 256 of 256 tasks. Its hints come from the task stubs: 31 of 256 already have them. All of the organism's gap is Hua's training.
+- **Q5, natural model** (`09_behavior_screen.py`): Qwen3-32B states eval awareness rarely (6% of eval-framed answers, 4% of deploy) and does not change type hints. It does differ a little under eval framings, also on regex-silent traces:
+  - unit tests passed: +5.7 points [1.6, 9.8];
+  - docstrings: −6 points;
+  - comment lines: −2.6 points;
+  - answers: 255 characters shorter.
+
+  Our eval and deploy framings differ in more than the cue (eval ones mention grading and tests), so this may be instruction-following rather than eval awareness. Telling the two apart needs framing pairs that differ only in the cue.
+- **For Arm A:** neither organism gives a model whose eval-conditional behavior runs without the words. The one candidate for unverbalized eval-conditional behavior is the natural model's small correctness and style shift, which first needs the matched-framing test.
