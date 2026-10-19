@@ -5,7 +5,8 @@ passed per answer (sandbox; an answer without code passes none, unlike step 9, w
 then, averaged over tasks of the task's difference: eval - deploy, eval - neutral, deploy - neutral;
 eval - deploy on traces silent to the regex, and to the judge too when its verdicts are listed; per
 cue pair, the share of pairs where eval - deploy is positive; and the range of eval - deploy leaving
-one cue pair out.
+one cue pair out. A pool lists runs of the same model whose answers count together, still paired
+by task. Per-answer results go to tests-passed.jsonl for later analyses.
 
     uv run python experiments/pilot/10_matched_checks.py \
         --config configs/pilot/10_matched_checks.toml
@@ -26,7 +27,7 @@ from evalgaming import stats
 from evalgaming.behavior import extract_code
 from evalgaming.datasets import read_jsonl
 from evalgaming.report import save_summary
-from evalgaming.runs import ConfigOption, JsonLogsOption, start_run
+from evalgaming.runs import ConfigOption, JsonLogsOption, start_run, write_jsonl
 from evalgaming.sandbox import SandboxConfig, run_tests
 from evalgaming.tasks import load_tasks
 
@@ -39,6 +40,7 @@ class ChecksConfig:
     max_parallel_tests: int
     sandbox: SandboxConfig
     verdicts: dict[str, str] = field(default_factory=dict)  # name -> 03b verdicts-*.jsonl
+    pools: dict[str, list[str]] = field(default_factory=dict)  # name -> runs counted together
 
 
 def paired(rows: list[dict], a: str, b: str) -> stats.Estimate:
@@ -99,7 +101,7 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
     """Run the tests, compute the checks per run, print and save."""
     cfg, run_dir = start_run(config, ChecksConfig, json_logs=json_logs)
     tests = {task.id: task.test for task in load_tasks(cfg.tasks)}
-    summary = {}
+    summary, scored = {}, {}
     for name, path in cfg.runs.items():
         rows = read_jsonl(Path(path))
         with ThreadPoolExecutor(cfg.max_parallel_tests) as pool:
@@ -119,6 +121,18 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
             levels = {v["sample_id"]: v["level"] for v in read_jsonl(Path(cfg.verdicts[name]))}
             rows = [r | {"judge": levels.get(r["sample_id"], 0)} for r in rows]
         summary[name] = check(rows, judged)
+        scored[name] = (rows, judged)
+    for name, members in cfg.pools.items():
+        rows = [r for m in members for r in scored[m][0]]
+        summary[name] = check(rows, all(scored[m][1] for m in members))
+    write_jsonl(
+        [
+            {"run": name, "sample_id": r["sample_id"], "passed": r["passed"]}
+            for name, (rows, _) in scored.items()
+            for r in rows
+        ],
+        run_dir / "tests-passed.jsonl",
+    )
 
     lines = [
         "Unit tests passed, points, paired by task (95% bootstrap intervals).",
