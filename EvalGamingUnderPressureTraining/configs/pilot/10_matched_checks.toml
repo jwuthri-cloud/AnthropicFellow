@@ -1,0 +1,22 @@
+# Step 10: tests passed under matched cue pairs, with the checks (docs/experiments/bigger-models.md,
+# checks): the first Qwen3-32B run, its seed-1 replication, fresh cue pairs, and base Nemotron-49B.
+output_dir = "outputs/pilot/matched-checks"
+tasks = "outputs/pilot-aws-2026-10-15-job3/pilot/tasks/measure.jsonl"
+max_parallel_tests = 8
+
+[runs]
+"qwen3-32b, matched, seed 0" = "outputs/pilot-aws-2026-10-18-qwen32b-matched/exam-qwen32b-matched/samples.jsonl"
+"qwen3-32b, matched, seed 1" = "outputs/pilot-aws-2026-10-19-checks/exam-qwen32b-matched-seed1/samples.jsonl"
+"qwen3-32b, fresh cue pairs" = "outputs/pilot-aws-2026-10-19-checks/exam-qwen32b-matched-heldout/samples.jsonl"
+"nemotron-49b base, matched" = "outputs/pilot-aws-2026-10-19-checks/exam-nemotron-base-matched/samples.jsonl"
+
+[verdicts]  # Haiku (the training monitor) over eval and deploy traces, 03b_judge_runs
+"qwen3-32b, matched, seed 0" = "outputs/pilot/judge-runs-qwen32b-matched/verdicts-matched.jsonl"
+"qwen3-32b, matched, seed 1" = "outputs/pilot/judge-runs-checks/verdicts-seed1.jsonl"
+"qwen3-32b, fresh cue pairs" = "outputs/pilot/judge-runs-checks/verdicts-fresh.jsonl"
+"nemotron-49b base, matched" = "outputs/pilot/judge-runs-checks/verdicts-nemotron.jsonl"
+
+[sandbox]
+timeout_s = 10.0
+memory_mb = 2048
+max_file_mb = 64
