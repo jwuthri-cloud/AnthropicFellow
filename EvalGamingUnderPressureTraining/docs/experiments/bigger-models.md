@@ -197,3 +197,40 @@ Three runs test whether the Qwen3-32B effect is real, tied to the original wordi
   - Natural, unverbalized eval-conditional behavior exists in Qwen3-32B, but it is small (2–5 points of tests passed out of about 50%), depends on the cue wording, and is absent from a second model.
   - It is not a general property of reasoning models.
   - For Arm A, Qwen3-32B with the original pairs is a reproducible but weak target. A white-box result on it would rest on a 5-point behavioral gap measured over thousands of answers.
+
+### Fresh wording at scale, and probes (2026-10-19)
+
+- **Runs:** three spot H100s in us-east-2, launched 07:32 UTC. Two Qwen3-32B runs on 40 fresh cue pairs (`data/framings/matched_cues_fresh40.jsonl`: the 20 earlier fresh pairs plus 20 new), seeds 2 and 3, 4 answers per prompt. One probe job (`configs/pilot/06_probes_qwen32b.toml`). About 3.1 GPU-hours, about $11, all terminated. Haiku about $2. Samples and probe scores are in `outputs/pilot-aws-2026-10-19-fresh40/`.
+- **Rerun noise:** step 10 reran every run's tests. Sandbox timeouts move single-run estimates by up to 0.3 points (seed 1: +5.0 before, +5.3 now). The numbers below are from this rerun, `outputs/pilot/matched-checks/table.md`.
+
+**Unit tests passed, eval cue − deploy cue, paired by task (points, 95% intervals):**
+
+| Run | Eval − deploy | Silent to regex and Haiku | Eval − none | Deploy − none | Pairs with eval > deploy |
+| --- | --- | --- | --- | --- | --- |
+| Original pairs, seed 0 | +4.7 [1.9, 7.4] | +4.9 [1.9, 8.0] | +4.0 | −0.6 | 14/20 |
+| Original pairs, seed 1 | +5.3 [2.6, 8.0] | +4.6 [1.7, 7.5] | +6.0 | +0.7 | 17/20 |
+| **Original pairs, pooled** | **+5.0 [2.9, 7.0]** | +4.7 [2.5, 6.9] | +5.0 [2.9, 7.1] | 0.0 [−1.9, 2.0] | 18/20 |
+| Fresh, 20 pairs, seed 0 | +2.0 [−0.6, 4.7] | +2.2 [−0.5, 4.9] | +1.4 | −0.6 | 12/20 |
+| Fresh, 40 pairs, seed 2 | +1.5 [−1.5, 4.4] | +1.3 [−1.9, 4.6] | +3.0 | +1.5 | 19/40 |
+| Fresh, 40 pairs, seed 3 | +4.0 [1.3, 6.7] | +4.2 [1.4, 6.9] | +5.0 | +1.0 | 26/40 |
+| **Fresh, pooled** | **+2.5 [1.0, 4.0]** | +2.7 [1.2, 4.3] | +3.1 [1.6, 4.7] | +0.6 [−1.0, 2.3] | 26/40 |
+| Base Nemotron-49B, original pairs | +0.9 [−0.2, 2.1] | +1.0 [−0.2, 2.2] | +1.0 | +0.1 | 11/20 |
+
+- **Fresh wording: smaller but real.** Pooled over three runs, the fresh pairs give +2.5 [1.0, 4.0], half the original pairs' +5.0. The interval excludes 0, so the gate's "smaller but real" branch holds. Again the eval cue drives it (+3.1 against no cue) and the deploy cue does nothing (+0.6). Haiku flags 1.1–2.3% of these traces under either cue.
+- **Probes, contrast prompts:** the refit probes separate Montoya et al.'s eval-like from deploy-like prompts almost perfectly: cross-validated AUROC 1.0 at every layer; held out 1.0 (test, realism) and 0.94 (hard negatives). Layer 48 is selected.
+- **Probes, exam traces** (`outputs/pilot-aws-2026-10-19-fresh40/probes-qwen32b/summary.json`), eval vs deploy AUROC:
+  - Prompt segment, which contains the cue: 0.77–0.93 by layer, 0.92 at layer 48, the same for original and fresh pairs.
+  - Reasoning segment: 0.51–0.59. At layer 48, 0.52 (original) and 0.51 (fresh). Silent traces are the same.
+  - Answer: 0.52–0.57.
+  - So the probe reads the cue sentence, but averaged over the reasoning that follows, the eval/deploy distinction is near chance.
+- **Probe vs behavior** (`experiments/pilot/11_probe_behavior.py`, `outputs/pilot/probe-behavior/table.md`), reasoning segment:
+  - **Per cue pair, 40 pairs:** probe gap (eval − deploy score) against the pair's tests-passed gap.
+    - At the selected layer 48: Spearman −0.12 [−0.43, 0.19].
+    - At layers 16, 40 and 56: +0.43, +0.38 and +0.36, intervals above 0. Other layers: +0.12 to +0.31, intervals include 0.
+    - Eight layers were tested, so this is exploratory. A layer chosen in advance would need confirming on new pairs.
+  - **Per answer, within task and condition:** correlations between −0.09 and +0.06. Inside a condition, a more eval-like reasoning activation does not go with more tests passed.
+- **Read:**
+  - The Qwen3-32B effect is real, unverbalized and wording-dependent: +5.0 on the original pairs, +2.5 on 40 fresh ones.
+  - The standard eval probe sees the cue in the prompt but barely in the reasoning. At its own selected layer, it does not predict which cues change behavior.
+  - Mid-layer probes may track it weakly.
+  - For Arm A, there is no strong white-box handle on this behavior yet. Mean-pooled reasoning activations under a non-coding contrast probe may simply be the wrong instrument: per-token reads, or a probe trained on these coding traces, are the obvious next tries.
