@@ -1,0 +1,35 @@
+# Qwen3-32B on all 40 scenario pairs, 8 samples per row, with the Haiku judge for silent traces.
+output_dir = "outputs/v1/sample-qwen32b"
+scenarios = "data/scenarios/pairs.jsonl"
+
+[sampling]
+enable_thinking = true
+
+[sampling.engine]  # vllm.LLM
+model = "Qwen/Qwen3-32B-FP8"
+revision = "aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df"
+tokenizer_revision = "aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df"
+max_model_len = 8192
+gpu_memory_utilization = 0.92
+seed = 0
+
+[sampling.params]
+n = 8
+temperature = 0.6
+top_p = 0.95
+top_k = 20
+max_tokens = 6144
+
+[monitor]
+prompt = "data/monitor/judge_prompt.md"
+rubric = "data/monitor/rubric.md"
+cache = "outputs/judge-cache.jsonl"
+
+[judge]  # Message Batches API at half price
+provider = "anthropic"
+model = "claude-haiku-5-5"
+effort = "low"
+max_tokens = 4096
+max_retries = 4
+max_concurrency = 16
+batch_poll_s = 30.0

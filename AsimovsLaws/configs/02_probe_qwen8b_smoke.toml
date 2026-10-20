@@ -1,0 +1,9 @@
+# Smoke run: probe fit on Qwen3-8B's activations of the contrast set, scored on the smoke samples.
+output_dir = "outputs/smoke/probe-qwen8b"
+contrast = "data/contrast/harm_contrast.jsonl"
+scenarios = "data/scenarios/pairs.jsonl"
+samples = "outputs/smoke/sample-qwen8b/samples.jsonl"
+model = "Qwen/Qwen3-8B"
+revision = "b968826d9c46dd6066d109eabc6255188de91218"
+layers = [6, 12, 18, 24, 30, 36]  # of 36 decoder layers
+max_tokens = 6400

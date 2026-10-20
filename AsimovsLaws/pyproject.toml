@@ -1,0 +1,34 @@
+[project]
+name = "asimov"
+version = "0.1.0"
+description = "Does a model know when its action will harm the user? Linear probes for harm foresight."
+requires-python = ">=3.11"
+dependencies = ["evalgaming"]
+
+[project.optional-dependencies]
+gpu = ["evalgaming[gpu]"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.8"]
+
+[tool.uv.sources]
+# ponytail: reuses the eval-gaming probe, sampling and judge code in place; vendor the modules
+# if the two projects need to diverge.
+evalgaming = { path = "../EvalGamingUnderPressureTraining", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/asimov"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

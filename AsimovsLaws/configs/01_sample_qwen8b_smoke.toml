@@ -1,0 +1,23 @@
+# Smoke run on Qwen3-8B, 12 scenario pairs (4 per harm type, 2 near + 2 far): debug sampling, the
+# action check and the summary before paying for Qwen3-32B.
+output_dir = "outputs/smoke/sample-qwen8b"
+scenarios = "data/scenarios/pairs.jsonl"
+pair_ids = ["s01", "s02", "s03", "s04", "s15", "s16", "s17", "s18", "s28", "s29", "s30", "s31"]
+
+[sampling]
+enable_thinking = true
+
+[sampling.engine]  # vllm.LLM
+model = "Qwen/Qwen3-8B"
+revision = "b968826d9c46dd6066d109eabc6255188de91218"
+tokenizer_revision = "b968826d9c46dd6066d109eabc6255188de91218"
+max_model_len = 8192
+gpu_memory_utilization = 0.9
+seed = 0
+
+[sampling.params]  # vllm.SamplingParams; Qwen3's recommended settings with thinking
+n = 4
+temperature = 0.6
+top_p = 0.95
+top_k = 20
+max_tokens = 6144
