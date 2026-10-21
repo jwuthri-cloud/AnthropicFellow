@@ -15,7 +15,7 @@ export AWS_PROFILE=connectly
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
 DEP=$(cd "$REPO/../EvalGamingUnderPressureTraining" && pwd)
 KEY=$HOME/.ssh/id_ed25519
-TAGS='{Key=Name,Value=asimov-smoke},{Key=Owner,Value=julien},{Key=Project,Value=asimov}'
+TAGS='{Key=Name,Value=asimov},{Key=Owner,Value=julien},{Key=Project,Value=asimov}'
 REGIONS="us-east-2 us-east-1 us-west-2 eu-north-1"
 MYIP=$(curl -s --max-time 10 https://checkip.amazonaws.com)
 mkdir -p "$REPO/outputs/aws"
