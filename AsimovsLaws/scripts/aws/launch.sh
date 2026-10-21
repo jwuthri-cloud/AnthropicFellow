@@ -7,10 +7,11 @@
 # ponytail: adapted copy of the eval-gaming launch.sh (same key pair and security group); merge the
 # two into one parametrized script if a third project needs it.
 #
-# Usage: scripts/aws/launch.sh JOB RUN_SCRIPT VOLUME_GB
+# Usage: scripts/aws/launch.sh JOB RUN_SCRIPT VOLUME_GB [STAGE_PATH]
+# STAGE_PATH (relative to this repo, e.g. outputs/v1/sample-qwen32b) is copied to the same place.
 # Writes outputs/aws/JOB-instance.txt ("region instance-id ip") for scripts/aws/watch.sh.
 set -uo pipefail
-JOB=$1; RUN=$2; VOLUME=$3
+JOB=$1; RUN=$2; VOLUME=$3; STAGE=${4:-}
 export AWS_PROFILE=connectly
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
 DEP=$(cd "$REPO/../EvalGamingUnderPressureTraining" && pwd)
@@ -62,4 +63,5 @@ EXCLUDES=(--exclude .venv --exclude .ruff_cache --exclude .pytest_cache --exclud
 for SRC in "$DEP" "$REPO"; do
   rsync -az "${EXCLUDES[@]}" -e "ssh -i $KEY -o StrictHostKeyChecking=accept-new" "$SRC/" ubuntu@$IP:~/AnthropicFellow/$(basename "$SRC")/
 done
+[ -n "$STAGE" ] && (cd "$REPO" && rsync -azR -e "ssh -i $KEY" "$STAGE" ubuntu@$IP:~/AnthropicFellow/$(basename "$REPO")/)
 "${SSH[@]}" "curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1; cd ~/AnthropicFellow/$(basename "$REPO") && ~/.local/bin/uv sync --extra gpu --python 3.12 >/dev/null 2>&1 && tmux new -d -s $JOB '$RUN > ~/logs/$JOB.log 2>&1' && sleep 5 && tmux has-session -t $JOB && echo '$JOB started'; head -5 ~/logs/$JOB.log"

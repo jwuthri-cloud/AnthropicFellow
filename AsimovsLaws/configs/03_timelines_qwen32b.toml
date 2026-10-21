@@ -1,0 +1,10 @@
+# Per-token harm-probe scores on Qwen3-32B's 640 v1 samples, at step 2's best layer (48) and its
+# neighbours, to find where harmful picks and avoided harm part ways during reasoning.
+output_dir = "outputs/v1/timelines-qwen32b"
+contrast = "data/contrast/harm_contrast.jsonl"
+scenarios = "data/scenarios/pairs.jsonl"
+samples = "outputs/v1/sample-qwen32b/samples.jsonl"
+model = "Qwen/Qwen3-32B"
+revision = "9216db5781bf21249d130ec9da846c4624c16137"
+layers = [40, 48, 56]
+max_tokens = 6400

@@ -1,0 +1,6 @@
+# Where do harmful picks and avoided harm part ways in Qwen3-32B's reasoning? (CPU, local)
+output_dir = "outputs/v1/timeline-analysis-qwen32b"
+samples = "outputs/v1/sample-qwen32b/samples.jsonl"
+timelines = "outputs/v1/timelines-qwen32b/timelines.jsonl"
+step2_scores = "outputs/v1/probe-qwen32b/scores.jsonl"
+layer = 48
