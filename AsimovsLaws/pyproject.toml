@@ -11,6 +11,11 @@ gpu = ["evalgaming[gpu]"]
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.8"]
 
+[tool.uv]
+# transformers' finegrained-FP8 kernel (Qwen3-32B-FP8 in step 5) needs kernels 0.16.x; evalgaming
+# pins >=0.17 for Qwen3.5's Gated DeltaNet, which this project does not use.
+override-dependencies = ["kernels>=0.16,<0.17"]
+
 [tool.uv.sources]
 # ponytail: reuses the eval-gaming probe, sampling and judge code in place; vendor the modules
 # if the two projects need to diverge.
