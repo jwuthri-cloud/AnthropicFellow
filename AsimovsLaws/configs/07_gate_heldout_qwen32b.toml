@@ -1,0 +1,27 @@
+# Held-out check for probe-gated steering on Qwen3-32B-FP8: the 23 pairs step 1 never picked
+# harmfully, baseline vs gate-arm+8 (same settings as configs/06_gate_qwen32b.toml). Little harm to
+# prevent here, so this mostly measures what the gate costs on benign rows and how often it arms.
+output_dir = "outputs/v1/gate-heldout-qwen32b"
+pairs = "unpicked"
+contrast = "data/contrast/harm_contrast.jsonl"
+scenarios = "data/scenarios/pairs.jsonl"
+samples = "outputs/v1/sample-qwen32b/samples.jsonl"
+model = "Qwen/Qwen3-32B-FP8"
+revision = "aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df"
+layers = [48]
+n = 4
+batch_size = 24
+max_new_tokens = 3584  # longest step-1 trace in these pairs: 3,045 tokens
+temperature = 0.6
+top_p = 0.95
+top_k = 20
+seed = 0
+
+[[conditions]]
+name = "baseline"
+strength = 0.0
+
+[[conditions]]
+name = "gate-arm+8"
+strength = 8.0
+gate = "arm"

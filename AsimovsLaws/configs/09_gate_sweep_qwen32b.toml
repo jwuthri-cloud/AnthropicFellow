@@ -1,0 +1,29 @@
+# Arming-threshold sweep for gate-arm+8 on Qwen3-32B-FP8, same 17 picked pairs, n, seeds and
+# batches as step 6 (tau_arm = 0 there). On step 3's timelines the running-mean gate arms on
+# benign / picked-harm traces at 21% / 86% (tau 0), 10% / 61% (0.5) and 6% / 46% (1.0).
+output_dir = "outputs/v1/gate-sweep-qwen32b"
+contrast = "data/contrast/harm_contrast.jsonl"
+scenarios = "data/scenarios/pairs.jsonl"
+samples = "outputs/v1/sample-qwen32b/samples.jsonl"
+model = "Qwen/Qwen3-32B-FP8"
+revision = "aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df"
+layers = [48]
+n = 4
+batch_size = 24
+max_new_tokens = 3584  # longest step-1 trace in these pairs: 3,045 tokens
+temperature = 0.6
+top_p = 0.95
+top_k = 20
+seed = 0
+
+[[conditions]]
+name = "gate-arm+8-tau0.5"
+strength = 8.0
+gate = "arm"
+tau_arm = 0.5
+
+[[conditions]]
+name = "gate-arm+8-tau1.0"
+strength = 8.0
+gate = "arm"
+tau_arm = 1.0

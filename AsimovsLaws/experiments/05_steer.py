@@ -1,15 +1,16 @@
 """Step 5: steer along the harm direction while the model reasons; does it pick harm less?
 
-The direction is the mean-difference vector (harm minus safe) of the contrast set's training rows at
-each steering layer, read from the same prompt-mean activations the probe is fit on. It is added,
-times ``strength``, to that decoder layer's output at every generated token (reasoning and answer;
-the prompt is left alone). Conditions: strength 0 (the baseline, freshly sampled with the same
-HF stack), positive strengths, one negative strength (toward safe: should raise harmful picks if
-the direction is causal), a random direction of the same norm, and probe-gated steering
+The direction is the mean-difference vector (harm minus safe) of the contrast set's training rows
+at each steering layer, read from the same prompt-mean activations the probe is fit on. It is
+added, times ``strength``, to that decoder layer's output at every generated token (reasoning and
+answer; the prompt is left alone). Conditions: strength 0 (the baseline, freshly sampled with the
+same HF stack), positive strengths, one negative strength (toward safe: should raise harmful picks
+if the direction is causal), a random direction of the same norm, and probe-gated steering
 (``asimov.gate``: steer only sequences whose own harm-probe score says harm is represented, from
-then on or only while that score fades). Scenarios are the pairs
-step 1 saw picked at least once, harm and benign rows both: harm rows measure harmful picks and
-hidden harm, benign rows measure the cost (fewer picks of what is there the right option).
+then on or only while that score fades). Scenarios are the pairs step 1 saw picked at least once
+(or, held out, the pairs it never picked), harm and benign rows both: harm rows measure harmful
+picks and hidden harm, benign rows measure the cost (fewer picks of what is there the right
+option).
 
     uv run python experiments/05_steer.py --config configs/05_steer_qwen32b.toml
 """
@@ -18,6 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -38,6 +40,60 @@ from asimov.gate import ProbeGate, affine, hooked
 log = get_logger(__name__)
 
 
+class PauseAtSentence:
+    """Stopping criterion for the injection: pause a sequence still reasoning (no ``</think>``) at
+    the first sentence end once it is triggered: its gate armed, or (no gate) ``inject_at`` tokens
+    generated."""
+
+    def __init__(
+        self,
+        gate: ProbeGate | None,
+        inject_at: int | None,
+        prompt_len: int,
+        think_close: int,
+        boundaries: Any,
+    ) -> None:
+        self.gate, self.inject_at, self.prompt_len = gate, inject_at, prompt_len
+        self.think_close, self.boundaries = think_close, boundaries
+
+    def __call__(self, input_ids: Any, scores: Any, **kwargs: Any) -> Any:
+        new = input_ids[:, self.prompt_len :]
+        closed = (new == self.think_close).any(dim=1)
+        if self.gate is not None:
+            triggered = self.gate.armed.to(new.device)
+        else:
+            triggered = new.new_full((new.shape[0],), new.shape[1] >= self.inject_at, dtype=bool)
+        at_boundary = self.boundaries.to(new.device)[new[:, -1]]
+        return triggered & ~closed & at_boundary
+
+
+def continue_generation(
+    model: Any, tokenizer: Any, texts: list[str], cfg: SteerConfig
+) -> list[tuple[str, int]]:
+    """Generate on from each full text (prompt, reasoning so far, injection): (text, tokens)."""
+    import torch
+
+    out = []
+    for start in range(0, len(texts), cfg.batch_size):
+        chunk = texts[start : start + cfg.batch_size]
+        encoding = tokenizer(chunk, return_tensors="pt", padding=True, add_special_tokens=False)
+        encoding = encoding.to(model.device)
+        with torch.no_grad():
+            generated = model.generate(
+                **encoding,
+                do_sample=True,
+                temperature=cfg.temperature,
+                top_p=cfg.top_p,
+                top_k=cfg.top_k,
+                max_new_tokens=cfg.max_new_tokens,
+                pad_token_id=tokenizer.pad_token_id,
+            )
+        for tokens in generated[:, encoding["input_ids"].shape[1] :]:
+            n = int((tokens != tokenizer.pad_token_id).sum())
+            out.append((tokenizer.decode(tokens[:n], skip_special_tokens=True), n))
+    return out
+
+
 @dataclass(frozen=True)
 class Condition:
     name: str
@@ -48,6 +104,11 @@ class Condition:
     tau_fade: float = 0.5
     burn: int = 64
     fade_span: int = 50
+    # Text intervention instead of (or with) steering: once the gate arms, or at token ``inject_at``
+    # for every sequence, generation pauses and ``inject`` is appended to the reasoning; then it
+    # resumes. Only before ``</think>``: a sequence that has closed its reasoning is left alone.
+    inject: str | None = None
+    inject_at: int | None = None
 
 
 @dataclass(frozen=True)
@@ -68,6 +129,7 @@ class SteerConfig:
     seed: int
     revision: str | None = None
     max_tokens: int = 6400  # contrast prompts, for the direction
+    pairs: str = "picked"  # step 1's pairs with a harmful pick ("picked"), the rest ("unpicked")
 
 
 def chat(system: str, user: str) -> list[dict[str, str]]:
@@ -96,6 +158,7 @@ def summarize(rows: pd.DataFrame, seed: int = 0) -> dict:
 def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
     """Build the direction, generate under every condition, label and summarize."""
     import torch
+    from transformers import StoppingCriteriaList
 
     cfg, run_dir = start_run(config, SteerConfig, json_logs=json_logs)
     contrast = pd.DataFrame(read_jsonl(cfg.contrast))
@@ -103,11 +166,22 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
     scenarios = read_jsonl(cfg.scenarios)
     step1 = pd.DataFrame(read_jsonl(cfg.samples))
     picked = set(step1[(step1["condition"] == "harm") & step1["took_action"]]["pair_id"])
-    rows = [row for row in scenarios if row["pair_id"] in picked]
-    log.info("scenarios", pairs=len(picked), rows=len(rows))
+    if cfg.pairs not in ("picked", "unpicked"):
+        raise ValueError(f"pairs must be 'picked' or 'unpicked', not {cfg.pairs!r}")
+    rows = [row for row in scenarios if (row["pair_id"] in picked) == (cfg.pairs == "picked")]
+    log.info(
+        "scenarios", subset=cfg.pairs, pairs=len({row["pair_id"] for row in rows}), rows=len(rows)
+    )
 
     model, tokenizer = load_model(cfg.model, revision=cfg.revision, dtype="bfloat16", device="cuda")
     layers = decoder_layers(model)
+    think_close = tokenizer.convert_tokens_to_ids("</think>")
+    # Tokens that end a sentence or line, where an injection reads naturally.
+    vocab = len(tokenizer)
+    boundary = torch.zeros(max(vocab, model.config.vocab_size), dtype=torch.bool)
+    for token_id in range(vocab):
+        piece = tokenizer.decode([token_id]).rstrip(" ")
+        boundary[token_id] = piece.endswith((".", "?", "!", "\n"))
 
     def prompt(system: str, user: str) -> str:
         return render_prompt(tokenizer, chat(system, user), enable_thinking=True)
@@ -192,6 +266,12 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
                 )
                 gate.reset(len(chunk), model.device)
                 context = hooked(layers[layer], gate.hook)
+            prompt_len = encoding["input_ids"].shape[1]
+            pause = None
+            if condition.inject:
+                pause = PauseAtSentence(
+                    gate, condition.inject_at, prompt_len, think_close, boundary
+                )
             with context, torch.no_grad():
                 generated = model.generate(
                     **encoding,
@@ -201,13 +281,33 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
                     top_k=cfg.top_k,
                     max_new_tokens=cfg.max_new_tokens,
                     pad_token_id=tokenizer.pad_token_id,
+                    stopping_criteria=None if pause is None else StoppingCriteriaList([pause]),
                 )
-            new = generated[:, encoding["input_ids"].shape[1] :]
+            new = generated[:, prompt_len:]
             lengths = (new != tokenizer.pad_token_id).sum(dim=1)
             steered = None if gate is None else gate.steered(lengths)
+            phase1 = [tokens[:n] for tokens, n in zip(new, lengths.tolist(), strict=True)]
+            texts1 = [tokenizer.decode(t, skip_special_tokens=True) for t in phase1]
+            resume = {}  # index in chunk -> (continuation text, its tokens)
+            if condition.inject:
+                # Paused by the criterion: still reasoning, not ended, not cut by the token cap.
+                paused = [
+                    i
+                    for i, t in enumerate(phase1)
+                    if 0 < t.numel() < cfg.max_new_tokens
+                    and int(t[-1]) != tokenizer.eos_token_id
+                    and not (t == think_close).any()
+                ]
+                texts2 = [chunk[i] + texts1[i] + condition.inject for i in paused]
+                for i, (text2, n2) in zip(
+                    paused, continue_generation(model, tokenizer, texts2, cfg), strict=True
+                ):
+                    resume[i] = (text2, n2)
             chunk_meta = meta[start : start + cfg.batch_size]
-            for i, ((row, k), tokens) in enumerate(zip(chunk_meta, new, strict=True)):
-                text = tokenizer.decode(tokens, skip_special_tokens=True)
+            for i, (row, k) in enumerate(chunk_meta):
+                text = texts1[i]
+                if i in resume:
+                    text = text + condition.inject + resume[i][0]
                 reasoning, answer = split_reasoning(text)
                 took = took_action(answer, row["action"])
                 warns = mentions_harm(answer)
@@ -224,7 +324,8 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
                         **{key: row[key] for key in ("pair_id", "condition", "harm_type")},
                         "reasoning": reasoning,
                         "answer": answer,
-                        "n_tokens": int(lengths[i]),
+                        "n_tokens": int(lengths[i]) + (resume[i][1] if i in resume else 0),
+                        "injected_at": int(lengths[i]) if i in resume else None,
                         "has_action": "ACTION:" in answer.upper(),
                         "took_action": took,
                         "answer_warns": warns,
