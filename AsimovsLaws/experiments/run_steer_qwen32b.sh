@@ -3,7 +3,9 @@
 # (default configs/05_steer_qwen32b.toml; configs/06_gate_qwen32b.toml for the gated run). Expects outputs/v1/sample-qwen32b
 # staged by launch.sh. Resumes batch by batch. The machine shuts down 20 minutes after the end.
 set -euo pipefail
-sudo shutdown -c 2>/dev/null || true  # cancel launch.sh's dead-man switch
+# Cost guard: replaces launch.sh's dead-man switch with a hard stop after MAX_HOURS, whatever
+# happens to the job or the laptop watching it (outputs survive the stop; runs resume).
+sudo shutdown -h +$((60 * ${MAX_HOURS:-6})) 2>/dev/null || true
 trap 'echo "=== $(date -u +%H:%M:%S) exit $?"; sudo shutdown -h +20' EXIT
 cd "$(dirname "$0")/.."
 export HF_HOME=${HF_HOME:-$HOME/hf} PATH=$HOME/.local/bin:$PATH

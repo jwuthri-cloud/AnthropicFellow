@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Launch one GPU job on Connectly's AWS (never RunPod): a p5.4xlarge (1x H100), spot first, then
-# on-demand, in the US regions and Stockholm, retried every 10 minutes for up to 6 hours. Copies THIS
+# on-demand, in the US regions and Stockholm, retried every 10 minutes MAX_ATTEMPTS times (default 3,
+# i.e. ~30 minutes; long unattended retry loops can land a machine while nobody is watching). Copies THIS
 # repo and ../EvalGamingUnderPressureTraining side by side into ~/AnthropicFellow/ (the uv path
 # dependency needs both), installs, and starts RUN_SCRIPT in tmux session JOB, logging to
 # ~/logs/JOB.log. The job script shuts the machine down when it ends.
@@ -41,7 +42,7 @@ try_region() {  # region market -> prints "region instance-id" on success
 }
 
 FOUND=""
-for attempt in $(seq 1 36); do
+for attempt in $(seq 1 ${MAX_ATTEMPTS:-3}); do
   for M in spot od; do
     for R in $REGIONS; do FOUND=$(try_region $R $M) && break 2; done
   done
@@ -49,7 +50,7 @@ for attempt in $(seq 1 36); do
   echo "$(date -u +%H:%M) attempt $attempt: no H100 anywhere"
   sleep 600
 done
-[ -z "$FOUND" ] && { echo "GAVE UP after 6 hours, nothing launched"; exit 1; }
+[ -z "$FOUND" ] && { echo "GAVE UP after $attempt attempts, nothing launched"; exit 1; }
 
 read -r REGION ID <<< "$FOUND"
 echo "LAUNCHED $ID in $REGION at $(date -u +%H:%M)"

@@ -16,3 +16,4 @@ Same as `../EvalGamingUnderPressureTraining/CLAUDE.md`:
 - Log findings in `docs/journal/YYYY-MM-DD.md` on the day they happen.
 - Never write synthetic model reasoning traces; scenarios and contrast passages are hand-written inputs, traces come from real models.
 - Paid compute (AWS GPU, Anthropic batches) needs the user's go each time.
+- No unattended GPU launches: launch.sh retries ~30 minutes by default (MAX_ATTEMPTS); if there is no capacity, report it and wait for the user rather than looping for hours. Every box carries an on-box hard stop (launch.sh's 60-minute dead-man switch, then the job script's MAX_HOURS), and a launched job is checked within ~15 minutes of starting.

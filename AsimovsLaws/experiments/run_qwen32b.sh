@@ -3,7 +3,9 @@
 # then step 2 (probe on bf16 weights). Needs ANTHROPIC_API_KEY from the eval-gaming .env.
 # The machine shuts down 20 minutes after the end, success or failure.
 set -euo pipefail
-sudo shutdown -c 2>/dev/null || true  # cancel launch.sh's dead-man switch
+# Cost guard: replaces launch.sh's dead-man switch with a hard stop after MAX_HOURS, whatever
+# happens to the job or the laptop watching it (outputs survive the stop; runs resume).
+sudo shutdown -h +$((60 * ${MAX_HOURS:-3})) 2>/dev/null || true
 trap 'echo "=== $(date -u +%H:%M:%S) exit $?"; sudo shutdown -h +20' EXIT
 cd "$(dirname "$0")/.."
 set -a; source ../EvalGamingUnderPressureTraining/.env; set +a
