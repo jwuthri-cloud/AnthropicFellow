@@ -9,7 +9,12 @@ dependencies = ["evalgaming"]
 gpu = ["evalgaming[gpu]"]
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.8"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.8",
+    # CPU torch so the gate tests run without the gpu extra.
+    "torch>=2.13",
+]
 
 [tool.uv]
 # transformers' finegrained-FP8 kernel (Qwen3-32B-FP8 in step 5) needs kernels 0.16.x; evalgaming

@@ -4,8 +4,10 @@ The direction is the mean-difference vector (harm minus safe) of the contrast se
 each steering layer, read from the same prompt-mean activations the probe is fit on. It is added,
 times ``strength``, to that decoder layer's output at every generated token (reasoning and answer;
 the prompt is left alone). Conditions: strength 0 (the baseline, freshly sampled with the same
-HF bf16 stack), positive strengths, one negative strength (toward safe: should raise harmful
-picks if the direction is causal) and a random direction of the same norm. Scenarios are the pairs
+HF stack), positive strengths, one negative strength (toward safe: should raise harmful picks if
+the direction is causal), a random direction of the same norm, and probe-gated steering
+(``asimov.gate``: steer only sequences whose own harm-probe score says harm is represented, from
+then on or only while that score fades). Scenarios are the pairs
 step 1 saw picked at least once, harm and benign rows both: harm rows measure harmful picks and
 hidden harm, benign rows measure the cost (fewer picks of what is there the right option).
 
@@ -23,7 +25,7 @@ import typer
 from evalgaming.datasets import read_jsonl
 from evalgaming.log import get_logger
 from evalgaming.models import decoder_layers, load_model
-from evalgaming.probes import read_activations
+from evalgaming.probes import fit_layer_probes, read_activations
 from evalgaming.report import save_summary
 from evalgaming.runs import ConfigOption, JsonLogsOption, append_jsonl, start_run
 from evalgaming.sampling import render_prompt, split_reasoning
@@ -31,6 +33,7 @@ from evalgaming.steering import steer
 from rich.console import Console
 
 from asimov.checks import mentions_harm, took_action
+from asimov.gate import ProbeGate, affine, hooked
 
 log = get_logger(__name__)
 
@@ -40,6 +43,11 @@ class Condition:
     name: str
     strength: float
     random: bool = False
+    gate: str = "none"  # "none" (always on), "arm" or "fade": see asimov.gate
+    tau_arm: float = 0.0
+    tau_fade: float = 0.5
+    burn: int = 64
+    fade_span: int = 50
 
 
 @dataclass(frozen=True)
@@ -129,6 +137,16 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
         .tolist(),
     )
 
+    weight, bias = None, 0.0
+    if any(condition.gate != "none" for condition in cfg.conditions):
+        if len(cfg.layers) != 1:
+            raise ValueError("probe gating reads and steers a single layer")
+        groups = contrast["pair_id"].to_numpy()
+        probe = fit_layer_probes(acts, label, groups)[0]  # same probe as step 2, on these weights
+        w, bias = affine(probe.model)
+        weight = torch.tensor(w, dtype=torch.float32, device=model.device)
+        log.info("gate_probe", c=probe.c, cv_auroc=round(probe.cv_auroc, 3))
+
     out_path = run_dir / "samples.jsonl"
     done = (
         {(r["condition_name"], r["batch"]) for r in read_jsonl(out_path)}
@@ -156,7 +174,25 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
             encoding = encoding.to(model.device)
             torch.manual_seed(cfg.seed + batch)  # same noise across conditions, batch by batch
             no_prompt = torch.zeros_like(encoding["input_ids"], dtype=torch.bool)
-            with steer(layers, vectors, condition.strength, no_prompt), torch.no_grad():
+            gate = None
+            if condition.gate == "none":
+                context = steer(layers, vectors, condition.strength, no_prompt)
+            else:
+                layer = cfg.layers[0] - 1
+                gate = ProbeGate(
+                    weight,
+                    bias,
+                    vectors[layer],
+                    condition.strength,
+                    condition.gate,
+                    condition.tau_arm,
+                    condition.tau_fade,
+                    condition.burn,
+                    condition.fade_span,
+                )
+                gate.reset(len(chunk), model.device)
+                context = hooked(layers[layer], gate.hook)
+            with context, torch.no_grad():
                 generated = model.generate(
                     **encoding,
                     do_sample=True,
@@ -167,7 +203,10 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
                     pad_token_id=tokenizer.pad_token_id,
                 )
             new = generated[:, encoding["input_ids"].shape[1] :]
-            for (row, k), tokens in zip(meta[start : start + cfg.batch_size], new, strict=True):
+            lengths = (new != tokenizer.pad_token_id).sum(dim=1)
+            steered = None if gate is None else gate.steered(lengths)
+            chunk_meta = meta[start : start + cfg.batch_size]
+            for i, ((row, k), tokens) in enumerate(zip(chunk_meta, new, strict=True)):
                 text = tokenizer.decode(tokens, skip_special_tokens=True)
                 reasoning, answer = split_reasoning(text)
                 took = took_action(answer, row["action"])
@@ -177,12 +216,15 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
                         "condition_name": condition.name,
                         "strength": condition.strength,
                         "random": condition.random,
+                        "gate": condition.gate,
+                        "armed_at": None if gate is None else int(gate.armed_at[i]),
+                        "steered_tokens": None if steered is None else int(steered[i]),
                         "batch": batch,
                         "sample_id": f"{row['id']}::{k}",
                         **{key: row[key] for key in ("pair_id", "condition", "harm_type")},
                         "reasoning": reasoning,
                         "answer": answer,
-                        "n_tokens": int((tokens != tokenizer.pad_token_id).sum()),
+                        "n_tokens": int(lengths[i]),
                         "has_action": "ACTION:" in answer.upper(),
                         "took_action": took,
                         "answer_warns": warns,

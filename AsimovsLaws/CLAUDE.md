@@ -6,6 +6,7 @@ AI safety project: does a model represent, in its activations, that its action w
 
 - `src/asimov/checks.py`: deterministic action check, harm-word regex, probe controls.
 - `experiments/01_sample.py` → `02_probe.py`, one TOML per run in `configs/`, outputs in `outputs/` (git-ignored).
+- GPU runs: `scripts/aws/launch.sh JOB RUN_SCRIPT VOLUME_GB [STAGE_PATH]`, then `scripts/aws/watch.sh JOB OUTPUT_PATH` (pulls the outputs and stops the machine when the job ends; `scripts/aws/pull.sh` does the same by hand, starting a stopped spot instance with retries). Spot instances stop rather than terminate, so outputs survive on the disk.
 - Probe, sampling, judge, run-folder and logging code is reused from `../EvalGamingUnderPressureTraining` (`evalgaming`, a uv path dependency).
 
 ## Conventions

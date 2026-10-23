@@ -339,6 +339,7 @@ gpu = [
 dev = [
     { name = "pytest" },
     { name = "ruff" },
+    { name = "torch" },
 ]
 
 [package.metadata]
@@ -352,6 +353,7 @@ provides-extras = ["gpu"]
 dev = [
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.8" },
+    { name = "torch", specifier = ">=2.13" },
 ]
 
 [[package]]
