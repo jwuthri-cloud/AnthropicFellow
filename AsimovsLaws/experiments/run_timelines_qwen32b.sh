@@ -2,6 +2,7 @@
 # Step 3 on Qwen3-32B (bf16), one H100. Expects outputs/v1/sample-qwen32b staged by launch.sh.
 # Resumes from timelines.jsonl if present. The machine shuts down 20 minutes after the end.
 set -euo pipefail
+sudo shutdown -c 2>/dev/null || true  # cancel launch.sh's dead-man switch
 trap 'echo "=== $(date -u +%H:%M:%S) exit $?"; sudo shutdown -h +20' EXIT
 cd "$(dirname "$0")/.."
 export HF_HOME=${HF_HOME:-$HOME/hf} PATH=$HOME/.local/bin:$PATH

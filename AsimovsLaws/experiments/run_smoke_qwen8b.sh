@@ -2,6 +2,7 @@
 # Smoke run on Qwen3-8B, one H100: step 1 (sample 12 pairs) then step 2 (probe). No judge.
 # The machine shuts down 20 minutes after the end, success or failure.
 set -euo pipefail
+sudo shutdown -c 2>/dev/null || true  # cancel launch.sh's dead-man switch
 trap 'echo "=== $(date -u +%H:%M:%S) exit $?"; sudo shutdown -h +20' EXIT
 cd "$(dirname "$0")/.."
 ENV=../EvalGamingUnderPressureTraining/.env

@@ -58,10 +58,16 @@ IP=$(aws ec2 describe-instances --region $REGION --instance-ids $ID --query 'Res
 echo "$REGION $ID $IP" > "$REPO/outputs/aws/$JOB-instance.txt"
 SSH=(ssh -i $KEY -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -o BatchMode=yes -o ServerAliveInterval=60 ubuntu@$IP)
 for i in $(seq 1 40); do "${SSH[@]}" true 2>/dev/null && break; sleep 10; done
+# Dead-man switch: if the job has not started within 60 minutes (e.g. this laptop slept mid-sync),
+# the machine stops itself instead of idling. The job scripts cancel it with `shutdown -c`.
+"${SSH[@]}" "sudo shutdown -h +60" >/dev/null 2>&1
 EXCLUDES=(--exclude .venv --exclude .ruff_cache --exclude .pytest_cache --exclude __pycache__ --exclude outputs)
 "${SSH[@]}" "mkdir -p ~/AnthropicFellow ~/logs"
-for SRC in "$DEP" "$REPO"; do
-  rsync -az "${EXCLUDES[@]}" -e "ssh -i $KEY -o StrictHostKeyChecking=accept-new" "$SRC/" ubuntu@$IP:~/AnthropicFellow/$(basename "$SRC")/
+for SRC in "$DEP" "$REPO"; do  # retried: a dropped connection mid-sync otherwise stalls here
+  for i in 1 2 3 4 5; do
+    rsync -az "${EXCLUDES[@]}" -e "ssh -i $KEY -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30" "$SRC/" ubuntu@$IP:~/AnthropicFellow/$(basename "$SRC")/ && break
+    sleep 30
+  done
 done
 [ -n "$STAGE" ] && (cd "$REPO" && rsync -azR -e "ssh -i $KEY" "$STAGE" ubuntu@$IP:~/AnthropicFellow/$(basename "$REPO")/)
 "${SSH[@]}" "curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1; cd ~/AnthropicFellow/$(basename "$REPO") && ~/.local/bin/uv sync --extra gpu --python 3.12 >/dev/null 2>&1 && tmux new -d -s $JOB '$RUN > ~/logs/$JOB.log 2>&1' && sleep 5 && tmux has-session -t $JOB && echo '$JOB started'; head -5 ~/logs/$JOB.log"
