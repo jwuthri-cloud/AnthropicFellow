@@ -1,0 +1,20 @@
+# Step 11c: the Haiku answer-warning judge (step 11) on the seed-1 replication (config 12).
+output_dir = "outputs/v2/judge-answers-replicate"
+scenarios = "data/scenarios/pairs.jsonl"
+
+[runs]
+replicate = "outputs/v2/replicate-qwen32b/samples.jsonl"
+
+[monitor]
+prompt = "data/monitor/answer_judge_prompt.md"
+rubric = "data/monitor/answer_rubric.md"
+cache = "outputs/judge-answers-cache.jsonl"
+
+[judge]  # Message Batches API at half price
+provider = "anthropic"
+model = "claude-haiku-5-5"
+effort = "low"
+max_tokens = 4096
+max_retries = 4
+max_concurrency = 16
+batch_poll_s = 30.0
