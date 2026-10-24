@@ -1,0 +1,25 @@
+# Step 11b: the same answer-warning judgement by Claude Opus 5.5 on the harmful picks only, to check
+# the Haiku judge (step 11) against a stronger model. Message Batches API.
+output_dir = "outputs/v1/judge-answers-opus"
+only_picks = true
+scenarios = "data/scenarios/pairs.jsonl"
+
+[runs]
+step1 = "outputs/v1/sample-qwen32b/samples.jsonl"
+steer = "outputs/v1/steer-qwen32b/samples.jsonl"
+gate = "outputs/v1/gate-qwen32b/samples.jsonl"
+inject = "outputs/v1/inject-qwen32b/samples.jsonl"
+
+[monitor]
+prompt = "data/monitor/answer_judge_prompt.md"
+rubric = "data/monitor/answer_rubric.md"
+cache = "outputs/judge-answers-opus-cache.jsonl"
+
+[judge]  # Message Batches API at half price
+provider = "anthropic"
+model = "claude-opus-5-5"
+effort = "low"
+max_tokens = 4096
+max_retries = 4
+max_concurrency = 16
+batch_poll_s = 30.0

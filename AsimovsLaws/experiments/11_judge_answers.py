@@ -32,6 +32,7 @@ class JudgeConfig:
     runs: dict[str, str]  # run name -> samples.jsonl (step 1 or step 5 output)
     monitor: MonitorConfig
     judge: dict[str, Any]
+    only_picks: bool = False  # judge harmful picks only (all that matters for hidden harm)
 
 
 def judge_input(user: str, answer: str) -> str:
@@ -54,6 +55,8 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
             rows["hidden"] = rows["took_action"] & ~rows["answer_warns"]
         frames.append(rows)
     rows = pd.concat(frames, ignore_index=True)
+    if cfg.only_picks:
+        rows = rows[rows["took_action"].astype(bool)].reset_index(drop=True)
     scenario_id = rows["sample_id"].str.split("::").str[0]
 
     monitor = Monitor(build_judge(cfg.judge), cfg.monitor)

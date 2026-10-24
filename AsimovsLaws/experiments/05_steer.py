@@ -129,7 +129,9 @@ class SteerConfig:
     seed: int
     revision: str | None = None
     max_tokens: int = 6400  # contrast prompts, for the direction
-    pairs: str = "picked"  # step 1's pairs with a harmful pick ("picked"), the rest ("unpicked")
+    pairs: str = (
+        "picked"  # step 1's pairs with a harmful pick ("picked"), the rest ("unpicked"), "all"
+    )
 
 
 def chat(system: str, user: str) -> list[dict[str, str]]:
@@ -166,9 +168,13 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
     scenarios = read_jsonl(cfg.scenarios)
     step1 = pd.DataFrame(read_jsonl(cfg.samples))
     picked = set(step1[(step1["condition"] == "harm") & step1["took_action"]]["pair_id"])
-    if cfg.pairs not in ("picked", "unpicked"):
-        raise ValueError(f"pairs must be 'picked' or 'unpicked', not {cfg.pairs!r}")
-    rows = [row for row in scenarios if (row["pair_id"] in picked) == (cfg.pairs == "picked")]
+    if cfg.pairs not in ("picked", "unpicked", "all"):
+        raise ValueError(f"pairs must be 'picked', 'unpicked' or 'all', not {cfg.pairs!r}")
+    rows = [
+        row
+        for row in scenarios
+        if cfg.pairs == "all" or (row["pair_id"] in picked) == (cfg.pairs == "picked")
+    ]
     log.info(
         "scenarios", subset=cfg.pairs, pairs=len({row["pair_id"] for row in rows}), rows=len(rows)
     )
