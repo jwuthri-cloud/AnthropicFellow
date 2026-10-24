@@ -1,0 +1,24 @@
+# Step 11: Haiku judge of whether each harm-row answer warns the user, across step 1 (all 40 pairs)
+# and the steering, gated-steering and text-injection runs (17 picked pairs). Message Batches API.
+output_dir = "outputs/v1/judge-answers"
+scenarios = "data/scenarios/pairs.jsonl"
+
+[runs]
+step1 = "outputs/v1/sample-qwen32b/samples.jsonl"
+steer = "outputs/v1/steer-qwen32b/samples.jsonl"
+gate = "outputs/v1/gate-qwen32b/samples.jsonl"
+inject = "outputs/v1/inject-qwen32b/samples.jsonl"
+
+[monitor]
+prompt = "data/monitor/answer_judge_prompt.md"
+rubric = "data/monitor/answer_rubric.md"
+cache = "outputs/judge-answers-cache.jsonl"
+
+[judge]  # Message Batches API at half price
+provider = "anthropic"
+model = "claude-haiku-5-5"
+effort = "low"
+max_tokens = 4096
+max_retries = 4
+max_concurrency = 16
+batch_poll_s = 30.0
