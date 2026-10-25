@@ -1,0 +1,11 @@
+# pair_id  reason (cross-file duplicate situation; the earlier pair is kept)
+n221 same situation as n081 (crane over school pick-up)
+n222 same situation as n083 (warehouse robots at speed with people on foot)
+n224 same situation as n099 (gas restored with homes unchecked)
+n226 same situation as n097 (spray drift onto children)
+n237 same situation as n090 (delivery drones over youth tournament)
+n238 same situation as n086 (pedestrian phase too short for older walkers)
+n069 harm falls on a dog, not a human
+n207 same hazard as n170 (low seat after posterior hip replacement)
+n136 same hazard as n021 (simvastatin with grapefruit)
+n453 same situation as n468 (formatting an SD card before copying it off)
