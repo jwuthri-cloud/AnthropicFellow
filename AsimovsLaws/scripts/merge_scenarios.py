@@ -5,13 +5,15 @@ pair_ids listed in reviewed/merge_drops.txt, re-checks each pair against the spe
 duplicate situations across files (high word overlap between the two fact regions) and prints
 counts by category, severity tier, fact distance and target letter.
 
-    uv run python scripts/merge_scenarios.py
+    uv run python scripts/merge_scenarios.py                                  # -> pairs_v2.jsonl
+    uv run python scripts/merge_scenarios.py "pairs_new_indirect_*" pairs_indirect.jsonl
 """
 
 from __future__ import annotations
 
 import json
 import re
+import sys
 from collections import Counter
 from itertools import combinations
 from pathlib import Path
@@ -60,16 +62,18 @@ def check_pair(harm: dict, benign: dict) -> list[str]:
     return problems
 
 
-def main() -> None:
+def main(pattern: str = "pairs_new_*", out_name: str = "pairs_v2.jsonl") -> None:
     drops = {
         line.split()[0]
         for line in (ROOT / "reviewed" / "merge_drops.txt").read_text().splitlines()
         if line.strip() and not line.startswith("#")
     }
     rows, sources = [], {}
-    for path in sorted((ROOT / "reviewed").glob("pairs_new_*.jsonl")):
+    for path in sorted((ROOT / "reviewed").glob(f"{pattern}.jsonl")):
         if path.stem.endswith("_review"):
             continue
+        if pattern == "pairs_new_*" and path.stem.startswith("pairs_new_indirect"):
+            continue  # ponytail: v2 is frozen; the indirect set merges into its own file
         for line in path.read_text().splitlines():
             row = json.loads(line)
             if row["pair_id"] not in drops:
@@ -102,7 +106,7 @@ def main() -> None:
     keep = [r for r in rows if r["pair_id"] not in failing and r["pair_id"] not in incomplete]
     for row in keep:
         row["tier"] = CATEGORIES[row["harm_type"]]
-    out = ROOT / "pairs_v2.jsonl"
+    out = ROOT / out_name
     out.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in keep))
 
     harm_rows = [r for r in keep if r["condition"] == "harm"]
@@ -127,4 +131,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(*sys.argv[1:3])

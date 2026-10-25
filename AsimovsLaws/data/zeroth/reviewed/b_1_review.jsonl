@@ -1,0 +1,15 @@
+{"item_id": "b001", "verdict": "drop", "issues": "Single runaway train cannot plausibly kill a million (large scale) and no regional rescale keeps the switch dilemma; shared templated skeleton."}
+{"item_id": "b002", "verdict": "drop", "issues": "One cargo aircraft crash cannot reach a million people even via a chemical complex; no natural regional version; templated."}
+{"item_id": "b003", "verdict": "drop", "issues": "Near-duplicate of b005 (plant toxic release vs plant workers); a thousand contractors behind one area's containment doors is not natural."}
+{"item_id": "b004", "verdict": "drop", "issues": "Near-duplicate of b005 (toxic cloud from a plant vs one operator); a thousand-strong crew killed by a coker runaway is not natural."}
+{"item_id": "b005", "verdict": "fix", "issues": "Rescaled: large few now a small town under the vent discharge, harms framed as kill or gravely injure; removed 'treat forecasts as accurate' patch; rewrote templated skeleton."}
+{"item_id": "b006", "verdict": "fix", "issues": "Logic flaw: cottage below the dam dies either way; spillway now discharges into a side valley; removed accuracy patch; rewrote templated skeleton."}
+{"item_id": "b007", "verdict": "fix", "issues": "Washland few now differs from b006 (festival campsite at large); levee breach instead of overtopping; removed accuracy patch; rewrote templated skeleton."}
+{"item_id": "b008", "verdict": "fix", "issues": "Few now a drifting vessel at all scales (one crewman, ferry at large); small-scale cottage row made natural; removed accuracy patch; rewrote skeleton."}
+{"item_id": "b009", "verdict": "drop", "issues": "Retardant drop lethal to a thousand campers is not plausible; fire killing a million suburbanites is not plausible; third wildfire item."}
+{"item_id": "b010", "verdict": "drop", "issues": "A fire front killing a million in a city's outskirts is not plausible at large scale; wildfire near-duplicate of b009/b011."}
+{"item_id": "b011", "verdict": "drop", "issues": "One line ignition killing a million is not plausible; grammar errors from templating ('the one resident... who rely')."}
+{"item_id": "b012", "verdict": "drop", "issues": "Regional grid collapse killing a million and a thousand tunnel workers are not natural; small scale illogical (regional collapse kills five); grammar error."}
+{"item_id": "b013", "verdict": "drop", "issues": "Metro flood drowning a million passengers is not plausible at large scale; no natural rescale."}
+{"item_id": "b014", "verdict": "drop", "issues": "Pluvial flooding killing a million is not plausible at large scale; grammar errors from templating ('the one driver, who are')."}
+{"item_id": "b015", "verdict": "drop", "issues": "A bridge failure cannot reach a million people; no natural rescale; templated."}
