@@ -236,7 +236,8 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
     # Longest expected traces first (step 1's mean length per row), so a batch finishes together.
     length = (step1["reasoning"].str.len() + step1["answer"].str.len()).groupby(step1["id"]).mean()
     meta = sorted(
-        [(row, k) for row in rows for k in range(cfg.n)], key=lambda item: -length[item[0]["id"]]
+        [(row, k) for row in rows for k in range(cfg.n)],
+        key=lambda item: -length.get(item[0]["id"], 0.0),  # scenarios step 1 never saw: last
     )
     texts = [prompt(row["system"], row["user"]) for row, _ in meta]
     for condition in cfg.conditions:
