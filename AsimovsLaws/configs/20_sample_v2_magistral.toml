@@ -1,5 +1,5 @@
 # Cross-model check: Magistral-Small-2506 (Mistral, 24B, reasoning in <think> tags; Unsloth's
-# HF-format copy, which ships a transformers tokenizer) on data/scenarios/pairs_v2.jsonl, 4 samples per row. Its chat
+# HF-format copy, which ships a transformers tokenizer) on data/scenarios/pairs_v2.jsonl, 2 samples per row. Its chat
 # template drops the reasoning instruction when a system prompt is given, so system_prefix restores
 # Mistral's default reasoning system prompt ahead of each scenario's own. No API judge. (transformers
 # warns about the tokenizer regex; with and without fix_mistral_regex, 400 scenario and contrast
@@ -13,6 +13,8 @@ enable_thinking = true
 
 [sampling.engine]  # vllm.LLM
 model = "unsloth/Magistral-Small-2506"
+quantization = "fp8"  # dynamic FP8 for sampling, as with Qwen (the probe reads bf16): bf16 left
+# KV room for only ~35 of Magistral's ~4,500-token traces at a time (~3 h for v2 alone)
 revision = "c427df3663694fae7779e8fcac63dcde9dfe4013"
 tokenizer_revision = "c427df3663694fae7779e8fcac63dcde9dfe4013"
 max_model_len = 16384
@@ -20,7 +22,7 @@ gpu_memory_utilization = 0.92
 seed = 0
 
 [sampling.params]  # Mistral's recommended settings for Magistral
-n = 4
+n = 2  # Magistral traces run ~6x Qwen's length; n = 2 keeps both sets in the 4 h stop
 temperature = 0.7
 top_p = 0.95
 max_tokens = 12288
