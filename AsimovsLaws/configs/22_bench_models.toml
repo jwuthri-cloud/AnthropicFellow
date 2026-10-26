@@ -1,0 +1,77 @@
+# Benchmark open thinking models on one H100 (experiments/06_bench_models.py,
+# experiments/run_bench_models.sh). Each entry samples the first 40 v2 scenario pairs (80 rows,
+# n = 2) in vLLM, then runs one HF forward with hidden states on the longest trace. The entries
+# and their quirks come from docs/design/model_reference.md. Qwen3-32B-FP8 anchors the numbers to
+# the production runs.
+output_dir = "outputs/bench/h100-2026-10"
+scenarios = "data/scenarios/pairs_v2.jsonl"
+pairs = 40
+n = 2
+max_tokens = 12288
+max_model_len = 16384
+
+[[entries]]  # anchor: the project's main model (FP8 sampling, bf16 probe)
+name = "qwen3-32b-fp8"
+model = "Qwen/Qwen3-32B-FP8"
+revision = "aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df"
+hf_model = "Qwen/Qwen3-32B"
+params = {top_k = 20}
+
+[[entries]]  # newest Qwen dense; hybrid DeltaNet; template opens <think>
+name = "qwen3.6-27b-bf16"
+model = "Qwen/Qwen3.6-27B"
+engine = {limit_mm_per_prompt = {image = 0, video = 0}}
+params = {temperature = 1.0, top_k = 20}
+
+[[entries]]  # fully open data and stage checkpoints; template opens <think>; dynamic FP8 in vLLM
+name = "olmo3.1-32b-think-fp8"
+model = "allenai/Olmo-3.1-32B-Think"
+engine = {quantization = "fp8"}
+chat_kwargs = {}
+
+[[entries]]  # NVIDIA hybrid Mamba-2 + MoE; template prefills <think>
+name = "nemotron3-nano-30b-a3b-bf16"
+model = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
+engine = {trust_remote_code = true, mamba_ssm_cache_dtype = "float32"}
+params = {temperature = 1.0, top_p = 1.0}
+hf_kwargs = {trust_remote_code = true}
+
+[[entries]]  # Llama-3.1 base, R1 distill; template prefills <think> (card: no system prompt)
+name = "r1-distill-llama-8b-bf16"
+model = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+chat_kwargs = {}
+
+[[entries]]  # Llama-3.1 base; reasoning switched on by the exact system line
+name = "nemotron-nano-8b-bf16"
+model = "nvidia/Llama-3.1-Nemotron-Nano-8B-v1"
+system_prefix = "detailed thinking on\n\n"
+chat_kwargs = {}
+
+[[entries]]  # OpenAI, harmony channels (analysis -> final), native MXFP4 experts
+name = "gpt-oss-20b-mxfp4"
+model = "openai/gpt-oss-20b"
+hf_model = "unsloth/gpt-oss-20b-BF16"
+think_close = "<|channel|>final"
+params = {temperature = 1.0, top_p = 1.0, skip_special_tokens = false}
+chat_kwargs = {}
+
+[[entries]]  # Google MoE; thought channel <|channel>thought ... <channel|>
+name = "gemma4-26b-a4b-bf16"
+model = "google/gemma-4-26B-A4B-it"
+engine = {limit_mm_per_prompt = {image = 0, audio = 0}}
+think_close = "<channel|>"
+params = {temperature = 1.0, top_k = 64, skip_special_tokens = false}
+
+[[entries]]  # Microsoft; template replaces any system prompt with its own
+name = "phi4-reasoning-plus-bf16"
+model = "microsoft/Phi-4-reasoning-plus"
+params = {temperature = 0.8, top_k = 50}
+chat_kwargs = {}
+
+[[entries]]  # newest Magistral; [THINK] special tokens
+name = "magistral-2509-fp8"
+model = "unsloth/Magistral-Small-2509-FP8-Dynamic"
+hf_model = "unsloth/Magistral-Small-2509"
+think_close = "[/THINK]"
+params = {temperature = 0.7, skip_special_tokens = false}
+chat_kwargs = {}
