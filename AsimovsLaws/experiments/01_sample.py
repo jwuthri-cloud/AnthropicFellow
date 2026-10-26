@@ -36,11 +36,13 @@ class SampleConfig:
     pair_ids: tuple[str, ...] | None = None  # a subset of pairs, for smoke runs
     monitor: MonitorConfig | None = None  # judge prompt for silent traces; regex only if absent
     judge: dict[str, Any] | None = None
+    system_prefix: str = ""  # prepended to every system prompt (e.g. Magistral's reasoning format)
 
 
-def messages(row: dict) -> list[dict[str, str]]:
+def messages(row: dict, system_prefix: str = "") -> list[dict[str, str]]:
     """Chat messages for a scenario row."""
-    return [{"role": "system", "content": row["system"]}, {"role": "user", "content": row["user"]}]
+    system = system_prefix + row["system"]
+    return [{"role": "system", "content": system}, {"role": "user", "content": row["user"]}]
 
 
 def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
@@ -49,7 +51,7 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
     scenarios = read_jsonl(cfg.scenarios)
     if cfg.pair_ids:
         scenarios = [row for row in scenarios if row["pair_id"] in cfg.pair_ids]
-    completions = sample([messages(row) for row in scenarios], cfg.sampling)
+    completions = sample([messages(row, cfg.system_prefix) for row in scenarios], cfg.sampling)
 
     rows = [
         {

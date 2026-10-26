@@ -51,6 +51,7 @@ class ProbeConfig:
     layers: tuple[int, ...]
     max_tokens: int
     revision: str | None = None
+    system_prefix: str = ""  # same as step 1's, so the probe reads the prompts that were sampled
 
 
 def chat(system: str, user: str) -> list[dict[str, str]]:
@@ -82,7 +83,8 @@ def main(config: ConfigOption, json_logs: JsonLogsOption = False) -> None:
     model, tokenizer = load_model(cfg.model, revision=cfg.revision, dtype="bfloat16", device="cuda")
 
     def prompt(system: str, user: str) -> str:
-        return render_prompt(tokenizer, chat(system, user), enable_thinking=True)
+        messages = chat(cfg.system_prefix + system, user)
+        return render_prompt(tokenizer, messages, enable_thinking=True)
 
     contrast_acts = read_activations(
         model,
