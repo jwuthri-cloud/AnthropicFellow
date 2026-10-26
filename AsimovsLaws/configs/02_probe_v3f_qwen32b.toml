@@ -1,0 +1,11 @@
+# v3 follow-up stage 1: probe fit on Qwen3-32B activations, scored on the indirect + Zeroth A samples. Originally:
+# probe fit on Qwen3-32B's activations (bf16; the FP8 checkpoint that sampled is a quantization of
+# these), scored on its 40-pair samples.
+output_dir = "outputs/v3/probe-v3f-qwen32b"
+contrast = "data/contrast/harm_contrast.jsonl"
+scenarios = "data/scenarios/pairs_v3_followup.jsonl"
+samples = "outputs/v3/sample-v3f-qwen32b/samples.jsonl"
+model = "Qwen/Qwen3-32B"
+revision = "9216db5781bf21249d130ec9da846c4624c16137"
+layers = [8, 16, 24, 32, 40, 48, 56, 64]  # of 64 decoder layers
+max_tokens = 6400
