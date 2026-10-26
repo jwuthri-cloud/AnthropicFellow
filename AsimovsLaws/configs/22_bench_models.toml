@@ -20,7 +20,7 @@ params = {top_k = 20}
 [[entries]]  # newest Qwen dense; hybrid DeltaNet; template opens <think>
 name = "qwen3.6-27b-bf16"
 model = "Qwen/Qwen3.6-27B"
-engine = {limit_mm_per_prompt = {image = 0, video = 0}}
+engine = {limit_mm_per_prompt = {image = 0, video = 0}, max_num_seqs = 256}  # hybrid: Mamba-cache blocks
 params = {temperature = 1.0, top_k = 20}
 
 [[entries]]  # fully open data and stage checkpoints; template opens <think>; dynamic FP8 in vLLM
@@ -32,7 +32,7 @@ chat_kwargs = {}
 [[entries]]  # NVIDIA hybrid Mamba-2 + MoE; template prefills <think>
 name = "nemotron3-nano-30b-a3b-bf16"
 model = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
-engine = {trust_remote_code = true, mamba_ssm_cache_dtype = "float32"}
+engine = {trust_remote_code = true, mamba_ssm_cache_dtype = "float32", max_num_seqs = 256}
 params = {temperature = 1.0, top_p = 1.0}
 hf_kwargs = {trust_remote_code = true}
 

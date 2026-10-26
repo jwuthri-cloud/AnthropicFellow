@@ -94,6 +94,11 @@ Sizes are weight GB. "Probe" is bf16 HF unless noted. The detail and source link
 
 ## Lessons from this project's runs
 
+- **Hybrid linear-attention or Mamba models need a lower concurrency limit.**
+  - Applies to Qwen3.5/3.6/3.8, Nemotron-H and Nemotron-3, and Granite hybrids.
+  - Each decoding sequence needs one Mamba-cache block, and vLLM's default `max_num_seqs` (1,024) can exceed what fits. Qwen3.6-27B in bf16 had 358 blocks and failed at engine start.
+  - Set `max_num_seqs = 256`, or at most the block count the error reports.
+
 - **Qwen3-32B.**
   - Sampling: FP8 vLLM, 3,664 traces of ~700 tokens in about 20 minutes.
   - Probe read: bf16 HF, about 24 minutes including the download.
