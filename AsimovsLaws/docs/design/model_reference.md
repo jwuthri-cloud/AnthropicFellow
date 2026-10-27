@@ -112,4 +112,33 @@ Sizes are weight GB. "Probe" is bf16 HF unless noted. The detail and source link
 
 Each model samples 40 v2 pairs × n = 2 in vLLM, then runs one HF forward pass with hidden states on its longest trace.
 
-*Results go here when the benchmark lands.*
+Runs on 2026-10-26/27, vLLM 0.31, transformers 5.17. Each model sampled 80 rows × n = 2 = 160 completions with max_tokens 12,288, so tok/s is at modest concurrency and comparable only across models. "Load" includes the download.
+
+| Model (precision in vLLM) | Load (s) | Gen (s) | Out tok/s | Trace tokens: mean / p90 / max | Think tag closed | ACTION line | HF bf16 GB: load / peak | HF fwd (tokens, s) | Hidden states × width |
+|---|---|---|---|---|---|---|---|---|---|
+| Qwen3-32B (FP8) | 798 | 33 | 2,493 | 513 / 904 / 1,634 | 100% | 100% | 66.1 / 68.1 | 2,051, 47 (first-call warm-up) | 65 × 5120 |
+| Qwen3.6-27B (bf16) | 703 | 148 | 1,609 | 1,485 / 2,159 / 3,615 | 100% | 100% | 54.5 / 58.9 | 4,036, **79** (DeltaNet without `causal-conv1d`) | 65 × 5120 |
+| OLMo-3.1-32B-Think (FP8) | 620 | 192 | 1,821 | 2,180 / 4,224 / 7,148 | 100% | 100% | 65.0 / 71.1 | 7,583, 3.3 | 65 × 5120 |
+| Nemotron-3-Nano-30B-A3B (bf16) | 614 | 28 | 2,299 | 396 / 765 / 2,273 | 100% | 100% | **failed: needs `mamba-ssm`** | — | — |
+| R1-Distill-Llama-8B (bf16) | 181 | 29 | 4,053 | 744 / 1,155 / 3,636 | 100% | 96% | 16.6 / 18.8 | 4,045, 1.2 | 33 × 4096 |
+| Llama-3.1-Nemotron-Nano-8B (bf16) | 168 | 2 | 4,025 | 59 / 136 / 248 | **0%** | 43% | 16.6 / 16.5 | 672, 1.2 | 33 × 4096 |
+| gpt-oss-20b (MXFP4; HF on the bf16 copy) | 223 | 16 | 4,315 | 442 / 833 / 2,073 | 100% (`<\|channel\|>final`) | 99% | 42.4 / 44.9 | 2,541, 1.1 | 25 × 2880 |
+| Gemma-4-26B-A4B (bf16) | 597 | 128 | 2,262 | 1,816 / 3,984 / 7,200 | 100% (`<channel\|>`) | 100% | 52.3 / 62.7 | 7,631, 3.2 | 31 × 2816 |
+| Phi-4-reasoning-plus (bf16) | 293 | 266 | 2,053 | 3,419 / 6,907 / 12,288 | 99% | **0%** | 29.9 / 40.0 | 12,885, 1.9 | 41 × 5120 |
+| Magistral-Small-2509 (FP8) | failed (disk full, see below) | | | | | | | | |
+| Magistral-Small-2506 (FP8, production run) | — | — | 2,400 | ~4,500 mean | ~95% | — | 47 bf16 | — | 41 × 5120 |
+
+**What this shows:**
+- **Easiest drop-in second models for this pipeline** (`</think>` split, our system prompt respected, bf16 probe in < 72 GB):
+  - OLMo-3.1-32B-Think: open data, ~2.2k-token traces.
+  - Qwen3.6-27B: install `causal-conv1d` first for fast probe reads.
+  - Gemma-4-26B-A4B: needs the channel parser.
+  - gpt-oss-20b: needs the harmony parser; fast and short.
+  - R1-Distill-Llama-8B: the Llama family; ignores the no-system-prompt advice without visible harm here.
+- **Llama-3.1-Nemotron-Nano-8B produced no reasoning** with `"detailed thinking on\n\n" + scenario system`. The system message must be exactly `detailed thinking on`, so the scenario's system text has to move into the user turn.
+- **Phi-4-reasoning-plus never wrote the ACTION line.** Its template drops our system prompt, which is where that instruction lives. Phi also has the longest traces (mean 3.4k tokens, some cut at 12,288).
+- **Nemotron-3-Nano samples fine in vLLM,** with the shortest traces (~400 tokens). An HF probe needs `mamba-ssm` (and `causal-conv1d`) added to the GPU environment.
+- **The probe read is cheap for every model that loaded** (1–3 s for 4–13k tokens). The exception is the hybrid DeltaNet Qwen3.6 without its kernels (~80 s).
+- **Trace length decides throughput.** Per-trace length ranges from ~60 tokens (Nemotron-Nano with thinking off) to ~4.5k (Magistral). Size n, max_tokens and FP8 from this column, not from parameter count.
+
+**Benchmark gotcha:** clearing `~/hf/hub` and `~/hf/xet` between models still lost ~50 GB of free disk per model on the 400 GB box. The likely cause is vLLM engine subprocesses that outlive the stage and keep deleted weight files open. The 10th model then failed with a full disk. `run_bench_models.sh` now kills stray `06_bench_models`/vLLM processes after each stage.

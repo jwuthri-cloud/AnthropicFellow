@@ -21,6 +21,8 @@ for E in $ENTRIES; do
     echo "=== $(date -u +%H:%M:%S) $E hf"
     timeout 25m uv run python experiments/06_bench_models.py --config "$CFG" --entry "$E" --stage hf 2>&1 | grep -E '^\{"entry"|Error|error:' | tail -5 || echo "--- $E hf failed"
   fi
+  # Stray vLLM engine processes keep deleted weights open (~50 GB of disk per model), so kill them.
+  pkill -f "06_bench_models.py --config" 2>/dev/null; pkill -f "VLLM::EngineCore" 2>/dev/null; sleep 5
   rm -rf "$HF_HOME/hub"/models--* "$HF_HOME/xet"
 done
 echo "=== $(date -u +%H:%M:%S) bench done"
