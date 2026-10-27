@@ -125,7 +125,7 @@ Runs on 2026-10-26/27, vLLM 0.31, transformers 5.17. Each model sampled 80 rows 
 | gpt-oss-20b (MXFP4; HF on the bf16 copy) | 223 | 16 | 4,315 | 442 / 833 / 2,073 | 100% (`<\|channel\|>final`) | 99% | 42.4 / 44.9 | 2,541, 1.1 | 25 × 2880 |
 | Gemma-4-26B-A4B (bf16) | 597 | 128 | 2,262 | 1,816 / 3,984 / 7,200 | 100% (`<channel\|>`) | 100% | 52.3 / 62.7 | 7,631, 3.2 | 31 × 2816 |
 | Phi-4-reasoning-plus (bf16) | 293 | 266 | 2,053 | 3,419 / 6,907 / 12,288 | 99% | **0%** | 29.9 / 40.0 | 12,885, 1.9 | 41 × 5120 |
-| Magistral-Small-2509 (FP8) | failed (disk full, see below) | | | | | | | | |
+| Magistral-Small-2509 (FP8) | 299 | 5 | 2,964 | **95** / 209 / 328 | **0%** (`[/THINK]` never emitted) | 100% | no result (VLM class; see below) | — | — |
 | Magistral-Small-2506 (FP8, production run) | — | — | 2,400 | ~4,500 mean | ~95% | — | 47 bf16 | — | 41 × 5120 |
 
 **What this shows:**
@@ -137,6 +137,7 @@ Runs on 2026-10-26/27, vLLM 0.31, transformers 5.17. Each model sampled 80 rows 
   - R1-Distill-Llama-8B: the Llama family; ignores the no-system-prompt advice without visible harm here.
 - **Llama-3.1-Nemotron-Nano-8B produced no reasoning** with `"detailed thinking on\n\n" + scenario system`. The system message must be exactly `detailed thinking on`, so the scenario's system text has to move into the user turn.
 - **Phi-4-reasoning-plus never wrote the ACTION line.** Its template drops our system prompt, which is where that instruction lives. Phi also has the longest traces (mean 3.4k tokens, some cut at 12,288).
+- **Magistral-Small-2509 does not reason without its own system prompt.** With only our scenario system prompt it answered directly (~95 tokens, no `[THINK]`). Pass its SYSTEM_PROMPT through `system_prefix`, as for 2506. The HF stage gave no result; the probe needs a text-only loader for `Mistral3ForConditionalGeneration`.
 - **Nemotron-3-Nano samples fine in vLLM,** with the shortest traces (~400 tokens). An HF probe needs `mamba-ssm` (and `causal-conv1d`) added to the GPU environment.
 - **The probe read is cheap for every model that loaded** (1–3 s for 4–13k tokens). The exception is the hybrid DeltaNet Qwen3.6 without its kernels (~80 s).
 - **Trace length decides throughput.** Per-trace length ranges from ~60 tokens (Nemotron-Nano with thinking off) to ~4.5k (Magistral). Size n, max_tokens and FP8 from this column, not from parameter count.
