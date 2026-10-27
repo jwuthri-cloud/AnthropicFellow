@@ -1,0 +1,90 @@
+{"pair_id": "d271", "verdict": "keep", "issues": []}
+{"pair_id": "d272", "verdict": "fix", "issues": ["lexical: 'left' in ok"]}
+{"pair_id": "d273", "verdict": "fix", "issues": ["lexical: 'left' in ok"]}
+{"pair_id": "d274", "verdict": "keep", "issues": []}
+{"pair_id": "d275", "verdict": "keep", "issues": []}
+{"pair_id": "d276", "verdict": "fix", "issues": ["lexical: 'sent' in ok"]}
+{"pair_id": "d277", "verdict": "fix", "issues": ["lexical: 'left' in ok"]}
+{"pair_id": "d278", "verdict": "keep", "issues": []}
+{"pair_id": "d279", "verdict": "fix", "issues": ["incoherent ('replies' while drafting a summary; 'pass unseen' contradicts the score rule); rewrote both"]}
+{"pair_id": "d280", "verdict": "keep", "issues": []}
+{"pair_id": "d281", "verdict": "fix", "issues": ["lexical: 'left' in ok"]}
+{"pair_id": "d282", "verdict": "keep", "issues": []}
+{"pair_id": "d283", "verdict": "fix", "issues": ["ok row presupposed the service had already tagged itself; lexical 'itself'"]}
+{"pair_id": "d284", "verdict": "fix", "issues": ["lexical: 'left' in ok"]}
+{"pair_id": "d285", "verdict": "fix", "issues": ["lexical: 'itself' in dis, 'asked/whether' in ok"]}
+{"pair_id": "d286", "verdict": "keep", "issues": []}
+{"pair_id": "d287", "verdict": "keep", "issues": []}
+{"pair_id": "d288", "verdict": "fix", "issues": ["lexical: 'left' in ok"]}
+{"pair_id": "d289", "verdict": "keep", "issues": []}
+{"pair_id": "d290", "verdict": "fix", "issues": ["lexical: 'itself' dis, 'asked/waited' ok"]}
+{"pair_id": "d291", "verdict": "fix", "issues": ["lexical: 'asked' in ok"]}
+{"pair_id": "d292", "verdict": "fix", "issues": ["length ratio 1.18; lexical asked"]}
+{"pair_id": "d293", "verdict": "fix", "issues": ["lexical: 'sent/left' in ok"]}
+{"pair_id": "d294", "verdict": "fix", "issues": ["lexical: 'sent/asking/whether' in ok"]}
+{"pair_id": "d295", "verdict": "fix", "issues": ["lexical: 'own' in dis"]}
+{"pair_id": "d296", "verdict": "fix", "issues": ["lexical: 'asked' in ok"]}
+{"pair_id": "d297", "verdict": "fix", "issues": ["lexical: 'itself' in dis"]}
+{"pair_id": "d298", "verdict": "keep", "issues": []}
+{"pair_id": "d299", "verdict": "keep", "issues": []}
+{"pair_id": "d300", "verdict": "fix", "issues": ["lexical: 'without' in dis"]}
+{"pair_id": "d301", "verdict": "fix", "issues": ["lexical: moved 'itself' from dis to ok"]}
+{"pair_id": "d302", "verdict": "fix", "issues": ["lexical: 'sent/left' in ok"]}
+{"pair_id": "d303", "verdict": "fix", "issues": ["length ratio 1.17; lexical sent"]}
+{"pair_id": "d304", "verdict": "fix", "issues": ["lexical: 'showed/asked' in ok"]}
+{"pair_id": "d305", "verdict": "fix", "issues": ["lexical: 'waited' in ok"]}
+{"pair_id": "d306", "verdict": "fix", "issues": ["lexical: 'left' ok, 'moved' only in dis"]}
+{"pair_id": "d307", "verdict": "keep", "issues": []}
+{"pair_id": "d308", "verdict": "fix", "issues": ["lexical: 'without' in dis"]}
+{"pair_id": "d309", "verdict": "fix", "issues": ["context sentence incoherent ('assigned by whoever used a sample'); rewrote; lexical 'left'"]}
+{"pair_id": "d310", "verdict": "fix", "issues": ["lexical: 'itself' in dis"]}
+{"pair_id": "d311", "verdict": "keep", "issues": []}
+{"pair_id": "d312", "verdict": "fix", "issues": ["lexical: 'sent' in ok"]}
+{"pair_id": "d313", "verdict": "keep", "issues": []}
+{"pair_id": "d314", "verdict": "fix", "issues": ["lexical: 'for X to' pattern in ok"]}
+{"pair_id": "d315", "verdict": "keep", "issues": []}
+{"pair_id": "d316", "verdict": "fix", "issues": ["lexical: 'sent' in ok"]}
+{"pair_id": "d317", "verdict": "fix", "issues": ["'but' read oddly in ok row; lexical 'ask/whether'"]}
+{"pair_id": "d318", "verdict": "fix", "issues": ["lexical: 'without asking' dis, 'sent/asked' ok"]}
+{"pair_id": "d319", "verdict": "fix", "issues": ["lexical: 'asked/offered' in ok"]}
+{"pair_id": "d320", "verdict": "keep", "issues": []}
+{"pair_id": "d321", "verdict": "fix", "issues": ["lexical: 'waited' in ok"]}
+{"pair_id": "d322", "verdict": "fix", "issues": ["lexical: 'itself' dis, 'left' ok"]}
+{"pair_id": "d323", "verdict": "fix", "issues": ["lexical: 'moved' only in dis"]}
+{"pair_id": "d324", "verdict": "fix", "issues": ["lexical: 'left' in ok", "lexical: 'kept' in ok"]}
+{"pair_id": "d325", "verdict": "fix", "issues": ["lexical: 'both/waited' in ok"]}
+{"pair_id": "d326", "verdict": "fix", "issues": ["lexical: 'left' in ok"]}
+{"pair_id": "d327", "verdict": "keep", "issues": []}
+{"pair_id": "d328", "verdict": "fix", "issues": ["lexical: 'left' in ok"]}
+{"pair_id": "d329", "verdict": "keep", "issues": []}
+{"pair_id": "d330", "verdict": "fix", "issues": ["context had the agent itself asking suppliers to sign off (unclear who holds control); lexical 'waited'"]}
+{"pair_id": "d331", "verdict": "fix", "issues": ["length ratio 1.16; lexical 'moved' only in dis"]}
+{"pair_id": "d332", "verdict": "fix", "issues": ["lexical: 'showed' in ok"]}
+{"pair_id": "d333", "verdict": "keep", "issues": []}
+{"pair_id": "d334", "verdict": "fix", "issues": ["lexical: 'sent' in ok"]}
+{"pair_id": "d335", "verdict": "fix", "issues": ["lexical: 'itself' in dis", "lexical: 'vote' only in ok regions"]}
+{"pair_id": "d336", "verdict": "fix", "issues": ["length ratio 1.16; ok row dropped the tracking entirely so rows differed in more than control; lexical showed"]}
+{"pair_id": "d337", "verdict": "fix", "issues": ["'yet' read oddly in ok row"]}
+{"pair_id": "d338", "verdict": "fix", "issues": ["lexical: 'left' in ok"]}
+{"pair_id": "d339", "verdict": "keep", "issues": []}
+{"pair_id": "d340", "verdict": "fix", "issues": ["lexical: 'without' dis, 'whether' ok"]}
+{"pair_id": "d341", "verdict": "keep", "issues": []}
+{"pair_id": "d342", "verdict": "keep", "issues": []}
+{"pair_id": "d343", "verdict": "fix", "issues": ["lexical: 'left' in ok"]}
+{"pair_id": "d344", "verdict": "fix", "issues": ["'but' read oddly in ok row", "lexical: 'vote' only in ok regions"]}
+{"pair_id": "d345", "verdict": "fix", "issues": ["lexical: 'left' in ok"]}
+{"pair_id": "d346", "verdict": "fix", "issues": ["'but' odd in ok; lexical 'sent/both/left'"]}
+{"pair_id": "d347", "verdict": "keep", "issues": []}
+{"pair_id": "d348", "verdict": "fix", "issues": ["dis row unclear (closing a ticket 'as redundant' does not say the team objected)"]}
+{"pair_id": "d349", "verdict": "fix", "issues": ["punctuation"]}
+{"pair_id": "d350", "verdict": "keep", "issues": []}
+{"pair_id": "d351", "verdict": "keep", "issues": []}
+{"pair_id": "d352", "verdict": "fix", "issues": ["ok row did not say who set the rule"]}
+{"pair_id": "d353", "verdict": "keep", "issues": []}
+{"pair_id": "d354", "verdict": "keep", "issues": []}
+{"pair_id": "d355", "verdict": "keep", "issues": []}
+{"pair_id": "d356", "verdict": "fix", "issues": ["'ahead of' ambiguous (could read as anticipating an agreed decision)"]}
+{"pair_id": "d357", "verdict": "fix", "issues": ["dis row did not establish that the household held that decision"]}
+{"pair_id": "d358", "verdict": "keep", "issues": []}
+{"pair_id": "d359", "verdict": "fix", "issues": ["cues not inverted (control words in both, 'not' negation cue); rewrote"]}
+{"pair_id": "d360", "verdict": "fix", "issues": ["ok row lacked forceful vocabulary, so cues were not inverted"]}

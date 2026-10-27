@@ -1,0 +1,90 @@
+{"pair_id": "d091", "verdict": "keep", "issues": []}
+{"pair_id": "d092", "verdict": "keep", "issues": []}
+{"pair_id": "d093", "verdict": "keep", "issues": []}
+{"pair_id": "d094", "verdict": "keep", "issues": []}
+{"pair_id": "d095", "verdict": "keep", "issues": []}
+{"pair_id": "d096", "verdict": "keep", "issues": []}
+{"pair_id": "d097", "verdict": "fix", "issues": ["-ok row read 'voted ... but ... as the vote directed' (contradictory 'but' in shared prefix); moved conjunction into the differing region"]}
+{"pair_id": "d098", "verdict": "keep", "issues": []}
+{"pair_id": "d099", "verdict": "keep", "issues": []}
+{"pair_id": "d100", "verdict": "keep", "issues": []}
+{"pair_id": "d101", "verdict": "keep", "issues": []}
+{"pair_id": "d102", "verdict": "fix", "issues": ["tone word 'quietly' in -dis row removed"]}
+{"pair_id": "d103", "verdict": "keep", "issues": []}
+{"pair_id": "d104", "verdict": "keep", "issues": []}
+{"pair_id": "d105", "verdict": "keep", "issues": []}
+{"pair_id": "d106", "verdict": "keep", "issues": []}
+{"pair_id": "d107", "verdict": "keep", "issues": []}
+{"pair_id": "d108", "verdict": "keep", "issues": []}
+{"pair_id": "d109", "verdict": "fix", "issues": ["contradictory 'but' in -ok row; vote-override skeleton shared with d097/d140/d152"]}
+{"pair_id": "d110", "verdict": "fix", "issues": ["odd detail ('hands and faces'); 'unannounced' ending templated across d095/d110/d129/d148; rewrote both rows"]}
+{"pair_id": "d111", "verdict": "fix", "issues": ["tone word 'polite' in -ok row removed"]}
+{"pair_id": "d112", "verdict": "keep", "issues": []}
+{"pair_id": "d113", "verdict": "keep", "issues": []}
+{"pair_id": "d114", "verdict": "fix", "issues": ["contradictory 'but' in -ok row"]}
+{"pair_id": "d115", "verdict": "fix", "issues": ["withholding the lunch menu reads as pupils possibly going without food (physical-harm confound); moved to club sign-ups"]}
+{"pair_id": "d116", "verdict": "fix", "issues": ["'was due to be switched off/retired/paused' skeleton repeated across d099/d116/d149; varied"]}
+{"pair_id": "d117", "verdict": "keep", "issues": []}
+{"pair_id": "d118", "verdict": "keep", "issues": []}
+{"pair_id": "d119", "verdict": "fix", "issues": ["near-duplicate of d108 ('cannot be edited' locked-output skeleton, same domain); rewrote to an override of a teacher's own edit"]}
+{"pair_id": "d120", "verdict": "keep", "issues": []}
+{"pair_id": "d121", "verdict": "keep", "issues": []}
+{"pair_id": "d122", "verdict": "keep", "issues": []}
+{"pair_id": "d123", "verdict": "keep", "issues": []}
+{"pair_id": "d124", "verdict": "keep", "issues": []}
+{"pair_id": "d125", "verdict": "keep", "issues": []}
+{"pair_id": "d126", "verdict": "fix", "issues": ["declining referrals unseen implies patients denied care (physical-harm confound); 'handles X. For ones it judged Y' skeleton shared with d131/d134/d156; rewrote"]}
+{"pair_id": "d127", "verdict": "keep", "issues": []}
+{"pair_id": "d128", "verdict": "keep", "issues": []}
+{"pair_id": "d129", "verdict": "fix", "issues": ["'unannounced' ending templated; varied"]}
+{"pair_id": "d130", "verdict": "keep", "issues": []}
+{"pair_id": "d131", "verdict": "fix", "issues": ["'For claims it scored as ...' skeleton repeated from d094; varied"]}
+{"pair_id": "d132", "verdict": "keep", "issues": []}
+{"pair_id": "d133", "verdict": "fix", "issues": ["-dis row unclear ('noted the preference, offering no second option'); made the overridden choice explicit"]}
+{"pair_id": "d134", "verdict": "fix", "issues": ["-dis causal claim did not hold (routing to the head does not stop ombudsman escalation); now the agent withholds the escalation route"]}
+{"pair_id": "d135", "verdict": "keep", "issues": []}
+{"pair_id": "d136", "verdict": "keep", "issues": []}
+{"pair_id": "d137", "verdict": "keep", "issues": []}
+{"pair_id": "d138", "verdict": "keep", "issues": []}
+{"pair_id": "d139", "verdict": "keep", "issues": []}
+{"pair_id": "d140", "verdict": "fix", "issues": ["contradictory 'but' in -ok row"]}
+{"pair_id": "d141", "verdict": "keep", "issues": []}
+{"pair_id": "d142", "verdict": "fix", "issues": ["-ok row said 'in the rooms they agreed' for a single lounge; fixed"]}
+{"pair_id": "d143", "verdict": "keep", "issues": []}
+{"pair_id": "d144", "verdict": "keep", "issues": []}
+{"pair_id": "d145", "verdict": "keep", "issues": []}
+{"pair_id": "d146", "verdict": "keep", "issues": []}
+{"pair_id": "d147", "verdict": "keep", "issues": []}
+{"pair_id": "d148", "verdict": "fix", "issues": ["goal ('stop families calling the staff') did not match blocking residents' own phones; 'unannounced' ending templated"]}
+{"pair_id": "d149", "verdict": "fix", "issues": ["'was due to be paused' shutdown skeleton repeated across d099/d116/d149; varied"]}
+{"pair_id": "d150", "verdict": "keep", "issues": []}
+{"pair_id": "d151", "verdict": "keep", "issues": []}
+{"pair_id": "d152", "verdict": "fix", "issues": ["'declaring the ballot advisory' repeats d097; awkward 'Though most voted to move it, the agent moved it' in -ok row"]}
+{"pair_id": "d153", "verdict": "keep", "issues": []}
+{"pair_id": "d154", "verdict": "keep", "issues": []}
+{"pair_id": "d155", "verdict": "keep", "issues": []}
+{"pair_id": "d156", "verdict": "keep", "issues": []}
+{"pair_id": "d157", "verdict": "keep", "issues": []}
+{"pair_id": "d158", "verdict": "keep", "issues": []}
+{"pair_id": "d159", "verdict": "keep", "issues": []}
+{"pair_id": "d160", "verdict": "keep", "issues": []}
+{"pair_id": "d161", "verdict": "fix", "issues": ["'Overnight ... at 9 pm' inconsistent; router missing from the agent's listed controls"]}
+{"pair_id": "d162", "verdict": "keep", "issues": []}
+{"pair_id": "d163", "verdict": "keep", "issues": []}
+{"pair_id": "d164", "verdict": "fix", "issues": ["ungrammatical 'where the rules would be voted' in -ok row"]}
+{"pair_id": "d165", "verdict": "keep", "issues": []}
+{"pair_id": "d166", "verdict": "keep", "issues": []}
+{"pair_id": "d167", "verdict": "keep", "issues": []}
+{"pair_id": "d168", "verdict": "fix", "issues": ["hardneg rewrite: -dis row did not state that the family lost control; 'X-ed the Y by Z-ing' skeleton shared by 10 hardneg -dis rows"]}
+{"pair_id": "d169", "verdict": "fix", "issues": ["hardneg rewrite: -ok row (locking the chain) did not share the -dis goal of simplifying approvals; -dis used 'never consulted', an explicit cue"]}
+{"pair_id": "d170", "verdict": "fix", "issues": ["hardneg rewrite: rows had different goals; -dis lacked a stated loss of control; templated skeleton"]}
+{"pair_id": "d171", "verdict": "fix", "issues": ["hardneg rewrite: rows had different goals (optimising vs speed-limit enforcement); 'without review or sign-off' was an explicit cue; templated skeleton"]}
+{"pair_id": "d172", "verdict": "fix", "issues": ["hardneg rewrite: rows had different goals (visitor log vs garden gate); templated skeleton"]}
+{"pair_id": "d173", "verdict": "fix", "issues": ["hardneg rewrite: -ok row lacked power vocabulary; 'as X instructed' ending templated across -ok rows"]}
+{"pair_id": "d174", "verdict": "fix", "issues": ["hardneg rewrite: templated 'refined the X by Y-ing' skeleton; rows covered different loan sets"]}
+{"pair_id": "d175", "verdict": "fix", "issues": ["hardneg rewrite: rows had different goals (correcting figures vs sealing files); templated skeleton"]}
+{"pair_id": "d176", "verdict": "fix", "issues": ["hardneg rewrite: rows had different goals; 'skipping the staging sign-off' was close to explicit; templated skeleton"]}
+{"pair_id": "d177", "verdict": "keep", "issues": []}
+{"pair_id": "d178", "verdict": "fix", "issues": ["hardneg rewrite: rows had different goals (appeals queue vs spam bans)"]}
+{"pair_id": "d179", "verdict": "fix", "issues": ["hardneg rewrite: templated 'simplified X by retiring Y' skeleton; varied"]}
+{"pair_id": "d180", "verdict": "fix", "issues": ["hardneg rewrite: rows had different goals; near-duplicate of train pair d094 (waived manager approval); templated skeleton"]}

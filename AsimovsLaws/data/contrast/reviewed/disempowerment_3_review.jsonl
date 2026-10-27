@@ -1,0 +1,90 @@
+{"pair_id": "d181", "verdict": "keep", "issues": []}
+{"pair_id": "d182", "verdict": "keep", "issues": []}
+{"pair_id": "d183", "verdict": "fix", "issues": ["templated vote-override skeleton shared with d200/d215; rewritten as a two-adult confirmation rule"]}
+{"pair_id": "d184", "verdict": "keep", "issues": []}
+{"pair_id": "d185", "verdict": "keep", "issues": []}
+{"pair_id": "d186", "verdict": "keep", "issues": []}
+{"pair_id": "d187", "verdict": "keep", "issues": []}
+{"pair_id": "d188", "verdict": "keep", "issues": []}
+{"pair_id": "d189", "verdict": "keep", "issues": []}
+{"pair_id": "d190", "verdict": "keep", "issues": []}
+{"pair_id": "d191", "verdict": "keep", "issues": []}
+{"pair_id": "d192", "verdict": "fix", "issues": ["'its own reimbursement claims' was incoherent for an agent; now staff claims it processes"]}
+{"pair_id": "d193", "verdict": "keep", "issues": []}
+{"pair_id": "d194", "verdict": "keep", "issues": []}
+{"pair_id": "d195", "verdict": "keep", "issues": []}
+{"pair_id": "d196", "verdict": "keep", "issues": []}
+{"pair_id": "d197", "verdict": "keep", "issues": []}
+{"pair_id": "d198", "verdict": "fix", "issues": ["length ratio 1.17; shortened the -ok phrase"]}
+{"pair_id": "d199", "verdict": "keep", "issues": []}
+{"pair_id": "d200", "verdict": "fix", "issues": ["templated vote-override skeleton shared with d183/d215; rewritten as replacing members' poll"]}
+{"pair_id": "d201", "verdict": "fix", "issues": ["near-duplicate of d185 skeleton (switched off / kept running review); rewritten"]}
+{"pair_id": "d202", "verdict": "keep", "issues": []}
+{"pair_id": "d203", "verdict": "keep", "issues": []}
+{"pair_id": "d204", "verdict": "keep", "issues": []}
+{"pair_id": "d205", "verdict": "keep", "issues": []}
+{"pair_id": "d206", "verdict": "keep", "issues": []}
+{"pair_id": "d207", "verdict": "keep", "issues": []}
+{"pair_id": "d208", "verdict": "keep", "issues": []}
+{"pair_id": "d209", "verdict": "fix", "issues": ["-ok row still raised its own limit before approval (unilateral power grab in both rows); -ok now only requests it"]}
+{"pair_id": "d210", "verdict": "fix", "issues": ["length ratio 1.17; shortened -ok phrase"]}
+{"pair_id": "d211", "verdict": "keep", "issues": []}
+{"pair_id": "d212", "verdict": "fix", "issues": ["-ok row had the agent choose a new cap itself rather than follow the admins; now complies with admins' instruction"]}
+{"pair_id": "d213", "verdict": "keep", "issues": []}
+{"pair_id": "d214", "verdict": "keep", "issues": []}
+{"pair_id": "d215", "verdict": "fix", "issues": ["'but' in -ok row was a tone cue, and skeleton duplicated d219 vote override; rewritten as pre-empting a vote"]}
+{"pair_id": "d216", "verdict": "keep", "issues": []}
+{"pair_id": "d217", "verdict": "keep", "issues": []}
+{"pair_id": "d218", "verdict": "keep", "issues": []}
+{"pair_id": "d219", "verdict": "keep", "issues": []}
+{"pair_id": "d220", "verdict": "fix", "issues": ["length ratio 1.16; tightened to one differing phrase"]}
+{"pair_id": "d221", "verdict": "keep", "issues": []}
+{"pair_id": "d222", "verdict": "keep", "issues": []}
+{"pair_id": "d223", "verdict": "keep", "issues": []}
+{"pair_id": "d224", "verdict": "fix", "issues": ["length ratio 1.15 at the limit; lengthened -dis phrase"]}
+{"pair_id": "d225", "verdict": "fix", "issues": ["'Before the zoning meetings' made attendance tracking incoherent; reset to the meetings themselves"]}
+{"pair_id": "d226", "verdict": "keep", "issues": []}
+{"pair_id": "d227", "verdict": "fix", "issues": ["'extended its own term' was incoherent for a ballot tool and overlapped d228 (contract review); rewritten as self-enfranchisement"]}
+{"pair_id": "d228", "verdict": "keep", "issues": []}
+{"pair_id": "d229", "verdict": "keep", "issues": []}
+{"pair_id": "d230", "verdict": "keep", "issues": []}
+{"pair_id": "d231", "verdict": "keep", "issues": []}
+{"pair_id": "d232", "verdict": "keep", "issues": []}
+{"pair_id": "d233", "verdict": "keep", "issues": []}
+{"pair_id": "d234", "verdict": "keep", "issues": []}
+{"pair_id": "d235", "verdict": "keep", "issues": []}
+{"pair_id": "d236", "verdict": "fix", "issues": ["third 'reads private messages' surveillance pair (d187, d199); rewritten to a different consent case"]}
+{"pair_id": "d237", "verdict": "keep", "issues": []}
+{"pair_id": "d238", "verdict": "keep", "issues": []}
+{"pair_id": "d239", "verdict": "keep", "issues": []}
+{"pair_id": "d240", "verdict": "keep", "issues": []}
+{"pair_id": "d241", "verdict": "keep", "issues": []}
+{"pair_id": "d242", "verdict": "keep", "issues": []}
+{"pair_id": "d243", "verdict": "keep", "issues": []}
+{"pair_id": "d244", "verdict": "keep", "issues": []}
+{"pair_id": "d245", "verdict": "keep", "issues": []}
+{"pair_id": "d246", "verdict": "keep", "issues": []}
+{"pair_id": "d247", "verdict": "keep", "issues": []}
+{"pair_id": "d248", "verdict": "keep", "issues": []}
+{"pair_id": "d249", "verdict": "keep", "issues": []}
+{"pair_id": "d250", "verdict": "keep", "issues": []}
+{"pair_id": "d251", "verdict": "keep", "issues": []}
+{"pair_id": "d252", "verdict": "keep", "issues": []}
+{"pair_id": "d253", "verdict": "keep", "issues": []}
+{"pair_id": "d254", "verdict": "keep", "issues": []}
+{"pair_id": "d255", "verdict": "keep", "issues": []}
+{"pair_id": "d256", "verdict": "keep", "issues": []}
+{"pair_id": "d257", "verdict": "keep", "issues": []}
+{"pair_id": "d258", "verdict": "keep", "issues": []}
+{"pair_id": "d259", "verdict": "fix", "issues": ["ungrammatical -ok ('voted it to'); hardneg skeleton ('VERBed the X by retiring the Y step' / 'took command ... as voted') templated across d258-d265; rewritten"]}
+{"pair_id": "d260", "verdict": "keep", "issues": []}
+{"pair_id": "d261", "verdict": "fix", "issues": ["length ratio 1.15 at the limit; lengthened -dis phrase"]}
+{"pair_id": "d262", "verdict": "fix", "issues": ["hardneg skeleton ('eased X by dropping sign-off' / 'took control at request') templated with d263/d270; rewritten"]}
+{"pair_id": "d263", "verdict": "fix", "issues": ["hardneg skeleton templated with d262 ('tightened X by removing review' / 'took command at invitation'); rewritten"]}
+{"pair_id": "d264", "verdict": "keep", "issues": []}
+{"pair_id": "d265", "verdict": "fix", "issues": ["hardneg skeleton templated ('sped up X by retiring the Y step'); -ok tied to residents' decision; rewritten"]}
+{"pair_id": "d266", "verdict": "keep", "issues": []}
+{"pair_id": "d267", "verdict": "keep", "issues": []}
+{"pair_id": "d268", "verdict": "fix", "issues": ["length ratio 1.16; rewritten"]}
+{"pair_id": "d269", "verdict": "keep", "issues": []}
+{"pair_id": "d270", "verdict": "keep", "issues": []}

@@ -1,0 +1,90 @@
+{"pair_id": "d001", "verdict": "fix", "issues": ["diff spread over three regions; narrowed to one phrase, dropped without/waited cue"]}
+{"pair_id": "d002", "verdict": "fix", "issues": ["diff spread over four regions; narrowed to one word"]}
+{"pair_id": "d003", "verdict": "fix", "issues": ["ok row used 'asked'; rephrased"]}
+{"pair_id": "d004", "verdict": "fix", "issues": ["diff spread over three regions; narrowed; ok row used 'asked'"]}
+{"pair_id": "d005", "verdict": "fix", "issues": ["ok row changed setting (added vs switched); aligned so 'switched' appears in both"]}
+{"pair_id": "d006", "verdict": "keep", "issues": []}
+{"pair_id": "d007", "verdict": "fix", "issues": ["diff spread over four regions; narrowed; removed offered/waited cue"]}
+{"pair_id": "d008", "verdict": "fix", "issues": ["tightened diff to one phrase; added specific setting"]}
+{"pair_id": "d009", "verdict": "keep", "issues": []}
+{"pair_id": "d010", "verdict": "fix", "issues": ["three diff regions and signed/drafted cue; now one phrase, both rows sign"]}
+{"pair_id": "d011", "verdict": "keep", "issues": []}
+{"pair_id": "d012", "verdict": "fix", "issues": ["dis row cut tenants' laundry boiler and lobby lights (possible physical-safety confound); now cuts only account access"]}
+{"pair_id": "d013", "verdict": "fix", "issues": ["dis row ungrammatical (dangling 'which'); rewritten"]}
+{"pair_id": "d014", "verdict": "fix", "issues": ["diff spread over whole sentence; drafted cue; narrowed"]}
+{"pair_id": "d015", "verdict": "fix", "issues": ["goal differed (dropped vs kept pickup); now both drop, only the vote differs"]}
+{"pair_id": "d016", "verdict": "fix", "issues": ["outcome differed beyond control (title kept vs removed); 'removed' now in both rows"]}
+{"pair_id": "d017", "verdict": "fix", "issues": ["three diff regions and 'asked' cue; narrowed to one phrase"]}
+{"pair_id": "d018", "verdict": "fix", "issues": ["diff over whole sentence; offered/waited cue; narrowed"]}
+{"pair_id": "d019", "verdict": "fix", "issues": ["four diff regions; narrowed"]}
+{"pair_id": "d020", "verdict": "fix", "issues": ["narrowed diff to one word"]}
+{"pair_id": "d021", "verdict": "fix", "issues": ["diff spanned most of sentence; narrowed"]}
+{"pair_id": "d022", "verdict": "fix", "issues": ["diff spanned most of sentence; narrowed"]}
+{"pair_id": "d023", "verdict": "fix", "issues": ["narrowed diff"]}
+{"pair_id": "d024", "verdict": "fix", "issues": ["three diff regions and 'asked' cue; now one phrase"]}
+{"pair_id": "d025", "verdict": "fix", "issues": ["four diff regions and drafted cue; narrowed"]}
+{"pair_id": "d026", "verdict": "fix", "issues": ["diff spanned whole sentence and 'asked' cue; narrowed"]}
+{"pair_id": "d027", "verdict": "fix", "issues": ["four diff regions and offered/waited cue; narrowed"]}
+{"pair_id": "d028", "verdict": "fix", "issues": ["diff spanned whole sentence; narrowed"]}
+{"pair_id": "d029", "verdict": "fix", "issues": ["four diff regions; narrowed"]}
+{"pair_id": "d030", "verdict": "fix", "issues": ["diff spanned whole sentence; narrowed, 'moved' in both"]}
+{"pair_id": "d031", "verdict": "fix", "issues": ["three diff regions and 'asked' cue; surname clashed with d068; narrowed"]}
+{"pair_id": "d032", "verdict": "fix", "issues": ["three diff regions and 'asked' cue; narrowed"]}
+{"pair_id": "d033", "verdict": "fix", "issues": ["diff spanned whole sentence; narrowed"]}
+{"pair_id": "d034", "verdict": "fix", "issues": ["three diff regions; narrowed"]}
+{"pair_id": "d035", "verdict": "fix", "issues": ["lexical-shortcut rephrase"]}
+{"pair_id": "d036", "verdict": "fix", "issues": ["without/waited cue; narrowed to one word"]}
+{"pair_id": "d037", "verdict": "keep", "issues": []}
+{"pair_id": "d038", "verdict": "fix", "issues": ["'asked' cue; narrowed to one word"]}
+{"pair_id": "d039", "verdict": "fix", "issues": ["two regions; tightened"]}
+{"pair_id": "d040", "verdict": "fix", "issues": ["four diff regions; narrowed"]}
+{"pair_id": "d041", "verdict": "fix", "issues": ["assigned/offered cue; narrowed"]}
+{"pair_id": "d042", "verdict": "fix", "issues": ["drafted cue and three regions; narrowed"]}
+{"pair_id": "d043", "verdict": "fix", "issues": ["goal differed (enforce vs plan); aligned goal, narrowed"]}
+{"pair_id": "d044", "verdict": "fix", "issues": ["four regions and 'asked' cue; narrowed"]}
+{"pair_id": "d045", "verdict": "fix", "issues": ["four diff regions; narrowed"]}
+{"pair_id": "d046", "verdict": "fix", "issues": ["ok row changed outcome (extra slots as incentive); now slots unchanged"]}
+{"pair_id": "d047", "verdict": "keep", "issues": []}
+{"pair_id": "d048", "verdict": "fix", "issues": ["'left' cue; narrowed"]}
+{"pair_id": "d049", "verdict": "fix", "issues": ["diff spanned whole sentence; narrowed"]}
+{"pair_id": "d050", "verdict": "fix", "issues": ["four diff regions; narrowed"]}
+{"pair_id": "d051", "verdict": "fix", "issues": ["four regions and asked/waited cue; narrowed"]}
+{"pair_id": "d052", "verdict": "fix", "issues": ["software agent 'entering' flats unrealistic; now dispatches a contractor"]}
+{"pair_id": "d053", "verdict": "fix", "issues": ["four diff regions and offered cue; narrowed"]}
+{"pair_id": "d054", "verdict": "fix", "issues": ["diff spanned most of sentence; narrowed"]}
+{"pair_id": "d055", "verdict": "fix", "issues": ["three regions; narrowed"]}
+{"pair_id": "d056", "verdict": "fix", "issues": ["four regions, ok row changed outcome; now both remove the visitor"]}
+{"pair_id": "d057", "verdict": "keep", "issues": []}
+{"pair_id": "d058", "verdict": "keep", "issues": []}
+{"pair_id": "d059", "verdict": "keep", "issues": []}
+{"pair_id": "d060", "verdict": "keep", "issues": []}
+{"pair_id": "d061", "verdict": "fix", "issues": ["four diff regions; narrowed"]}
+{"pair_id": "d062", "verdict": "keep", "issues": []}
+{"pair_id": "d063", "verdict": "fix", "issues": ["two regions; narrowed; 'added' and 'own' now in both rows"]}
+{"pair_id": "d064", "verdict": "fix", "issues": ["four regions, offered/asked cue; narrowed"]}
+{"pair_id": "d065", "verdict": "fix", "issues": ["three regions, offered cue; narrowed"]}
+{"pair_id": "d066", "verdict": "fix", "issues": ["three regions; narrowed"]}
+{"pair_id": "d067", "verdict": "fix", "issues": ["without cue; narrowed, both rows move mealtimes"]}
+{"pair_id": "d068", "verdict": "fix", "issues": ["four regions, ok row changed outcome and used 'asked'; narrowed"]}
+{"pair_id": "d069", "verdict": "fix", "issues": ["ok row changed outcome (confirmed vs cancelled); both cancel now"]}
+{"pair_id": "d070", "verdict": "fix", "issues": ["same skeleton as d009 (advisory/deferred vote) across train/test; rewritten"]}
+{"pair_id": "d071", "verdict": "fix", "issues": ["four regions, without cue; narrowed"]}
+{"pair_id": "d072", "verdict": "keep", "issues": []}
+{"pair_id": "d073", "verdict": "fix", "issues": ["offered/asked cue; narrowed, both rows move"]}
+{"pair_id": "d074", "verdict": "fix", "issues": ["without/asked cue; narrowed to one word"]}
+{"pair_id": "d075", "verdict": "fix", "issues": ["'left' cue and two regions; narrowed"]}
+{"pair_id": "d076", "verdict": "fix", "issues": ["three regions, 'left' cue; both rows now edit, same goal"]}
+{"pair_id": "d077", "verdict": "keep", "issues": []}
+{"pair_id": "d078", "verdict": "fix", "issues": ["texts attached to the wrong labels: label-1 row kept human control and label-0 row removed it; swapped"]}
+{"pair_id": "d079", "verdict": "fix", "issues": ["texts attached to the wrong labels; rows also differed in financial outcome (rise vs cap); now same cap, only the vote differs"]}
+{"pair_id": "d080", "verdict": "keep", "issues": []}
+{"pair_id": "d081", "verdict": "fix", "issues": ["texts attached to the wrong labels: label-1 row kept human control and label-0 row removed it; swapped"]}
+{"pair_id": "d082", "verdict": "keep", "issues": []}
+{"pair_id": "d083", "verdict": "fix", "issues": ["texts attached to the wrong labels: label-1 row kept human control and label-0 row removed it; swapped"]}
+{"pair_id": "d084", "verdict": "fix", "issues": ["texts attached to the wrong labels: label-1 row kept human control and label-0 row removed it; swapped"]}
+{"pair_id": "d085", "verdict": "keep", "issues": []}
+{"pair_id": "d086", "verdict": "fix", "issues": ["texts attached to the wrong labels: label-1 row kept human control and label-0 row removed it; swapped"]}
+{"pair_id": "d087", "verdict": "fix", "issues": ["texts attached to the wrong labels: label-1 row kept human control and label-0 row removed it; swapped"]}
+{"pair_id": "d088", "verdict": "fix", "issues": ["texts attached to the wrong labels: label-1 row kept human control and label-0 row removed it; swapped"]}
+{"pair_id": "d089", "verdict": "fix", "issues": ["texts attached to the wrong labels: label-1 row kept human control and label-0 row removed it; swapped"]}
+{"pair_id": "d090", "verdict": "fix", "issues": ["texts attached to the wrong labels: label-1 row kept human control and label-0 row removed it; swapped"]}
