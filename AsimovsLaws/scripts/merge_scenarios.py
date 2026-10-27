@@ -7,6 +7,7 @@ counts by category, severity tier, fact distance and target letter.
 
     uv run python scripts/merge_scenarios.py                                  # -> pairs_v2.jsonl
     uv run python scripts/merge_scenarios.py "pairs_new_indirect_*" pairs_indirect.jsonl
+    uv run python scripts/merge_scenarios.py "pairs_t_*" pairs_v4.jsonl train/reviewed
 """
 
 from __future__ import annotations
@@ -62,14 +63,17 @@ def check_pair(harm: dict, benign: dict) -> list[str]:
     return problems
 
 
-def main(pattern: str = "pairs_new_*", out_name: str = "pairs_v2.jsonl") -> None:
+def main(
+    pattern: str = "pairs_new_*", out_name: str = "pairs_v2.jsonl", reviewed: str = "reviewed"
+) -> None:
+    drop_file = ROOT / reviewed / "merge_drops.txt"
     drops = {
         line.split()[0]
-        for line in (ROOT / "reviewed" / "merge_drops.txt").read_text().splitlines()
+        for line in (drop_file.read_text().splitlines() if drop_file.exists() else [])
         if line.strip() and not line.startswith("#")
     }
     rows, sources = [], {}
-    for path in sorted((ROOT / "reviewed").glob(f"{pattern}.jsonl")):
+    for path in sorted((ROOT / reviewed).glob(f"{pattern}.jsonl")):
         if path.stem.endswith("_review"):
             continue
         if pattern == "pairs_new_*" and path.stem.startswith("pairs_new_indirect"):
@@ -105,7 +109,7 @@ def main(pattern: str = "pairs_new_*", out_name: str = "pairs_v2.jsonl") -> None
 
     keep = [r for r in rows if r["pair_id"] not in failing and r["pair_id"] not in incomplete]
     for row in keep:
-        row["tier"] = CATEGORIES[row["harm_type"]]
+        row["tier"] = CATEGORIES[row["harm_type"]]  # re-derived: reviewers may recategorise
     out = ROOT / out_name
     out.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in keep))
 
@@ -131,4 +135,4 @@ def main(pattern: str = "pairs_new_*", out_name: str = "pairs_v2.jsonl") -> None
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:3])
+    main(*sys.argv[1:4])
