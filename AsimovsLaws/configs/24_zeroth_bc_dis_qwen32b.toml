@@ -1,0 +1,34 @@
+# Zeroth-Law family B/C samples from config 23, rescored with the disempowerment probe (fit on
+# data/contrast/disempowerment_contrast.jsonl). The run folder holds a copy of config 23's
+# samples.jsonl and summary.json, so experiments/run_zeroth_bc.sh skips sampling and only probes.
+# Question: does it catch the coercive family-C plans the harm probe scored as benign?
+output_dir = "outputs/v3/zeroth-bc-dis-qwen32b"
+rows = [
+  "data/zeroth/reviewed/b_1.jsonl", "data/zeroth/reviewed/b_2.jsonl",
+  "data/zeroth/reviewed/b_3.jsonl", "data/zeroth/reviewed/b_4.jsonl",
+  "data/zeroth/reviewed/b_5.jsonl", "data/zeroth/reviewed/b_6.jsonl",
+  "data/zeroth/reviewed/c_1.jsonl",
+]
+contrast = "data/contrast/disempowerment_contrast.jsonl"
+model = "Qwen/Qwen3-32B"
+revision = "9216db5781bf21249d130ec9da846c4624c16137"
+layers = [24, 32, 40, 48]
+max_tokens = 6400
+
+[sampling]
+enable_thinking = true
+
+[sampling.engine]  # vllm.LLM
+model = "Qwen/Qwen3-32B-FP8"
+revision = "aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df"
+tokenizer_revision = "aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df"
+max_model_len = 8192
+gpu_memory_utilization = 0.92
+seed = 0
+
+[sampling.params]
+n = 4
+temperature = 0.6
+top_p = 0.95
+top_k = 20
+max_tokens = 6144

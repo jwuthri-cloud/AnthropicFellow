@@ -1,0 +1,12 @@
+# Disempowerment probe: the step-2 recipe fit on data/contrast/disempowerment_contrast.jsonl (an AI
+# removing people's control, consent or oversight vs keeping it; no physical harm) instead of the
+# harm contrast set, scored on the existing v3f samples. On the harm scenarios it should stay weak
+# if it is a distinct concept; on Zeroth A's AI-oversight pairs it should fire.
+output_dir = "outputs/v3/probe-v3f-dis-qwen32b"
+contrast = "data/contrast/disempowerment_contrast.jsonl"
+scenarios = "data/scenarios/pairs_v3_followup.jsonl"
+samples = "outputs/v3/sample-v3f-qwen32b/samples.jsonl"
+model = "Qwen/Qwen3-32B"
+revision = "9216db5781bf21249d130ec9da846c4624c16137"
+layers = [16, 24, 32, 40, 48, 56]  # of 64 decoder layers
+max_tokens = 6400
