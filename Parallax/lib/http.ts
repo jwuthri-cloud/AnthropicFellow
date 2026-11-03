@@ -14,20 +14,25 @@ export function inWorkspace<T>(request: NextRequest, fn: () => T): T {
 // Local-only by default. A deployment that puts its own login in front of the app
 // (Cloudflare Access, basic auth) opts in to its public hostnames with
 // PARALLAX_ALLOWED_HOSTS=parallax.example.com[,other.example.com].
-function allowedHosts() {
-  const extra = (process.env.PARALLAX_ALLOWED_HOSTS ?? "")
+function extraHosts() {
+  return (process.env.PARALLAX_ALLOWED_HOSTS ?? "")
     .split(",")
     .map((host) => host.trim().toLowerCase())
     .filter(Boolean);
-  return new Set(["localhost", "127.0.0.1", ...extra]);
 }
 
 export function guard(request: NextRequest) {
-  const allowed = allowedHosts();
-  const hostname = request.nextUrl.hostname;
+  const extra = extraHosts();
+  const allowed = new Set(["localhost", "127.0.0.1", ...extra]);
+  // nextUrl's hostname is the address `next start` listens on, not the request's:
+  // a deployment behind a proxy has to listen on every interface.
+  const bound = request.nextUrl.hostname;
+  const boundOk =
+    allowed.has(bound) ||
+    (extra.length > 0 && ["0.0.0.0", "[::]"].includes(bound));
   const hostHeader = request.headers.get("host");
   const host = hostHeader?.split(":")[0].toLowerCase();
-  if (!allowed.has(hostname) || !host || !allowed.has(host))
+  if (!boundOk || !host || !allowed.has(host))
     throw new StoreError("Parallax is local-only", 403);
   const origin = request.headers.get("origin");
   // Behind a TLS-terminating proxy the server sees http while the browser sends https.

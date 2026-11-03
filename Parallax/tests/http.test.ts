@@ -52,10 +52,11 @@ test("PARALLAX_ALLOWED_HOSTS opts a proxied deployment in, and nothing else", ()
   const previous = process.env.PARALLAX_ALLOWED_HOSTS;
   process.env.PARALLAX_ALLOWED_HOSTS = " Parallax.Example.com , ";
   try {
+    // `next start --hostname 0.0.0.0` builds request URLs from the listen address.
     const proxied = (headers: Record<string, string> = {}) =>
       request(
         { host: "parallax.example.com", ...headers },
-        "http://parallax.example.com/api/records",
+        "http://0.0.0.0:3000/api/records",
       );
     assert.doesNotThrow(() => guard(proxied()));
     assert.doesNotThrow(() =>
@@ -89,6 +90,14 @@ test("PARALLAX_ALLOWED_HOSTS opts a proxied deployment in, and nothing else", ()
     if (previous === undefined) delete process.env.PARALLAX_ALLOWED_HOSTS;
     else process.env.PARALLAX_ALLOWED_HOSTS = previous;
   }
+  // Without the opt-in, listening on every interface stays refused.
+  assert.throws(
+    () =>
+      guard(
+        request({ host: "127.0.0.1:3000" }, "http://0.0.0.0:3000/api/records"),
+      ),
+    /local-only/,
+  );
 });
 test("malformed and oversized JSON produce controlled errors", async () => {
   const bad = new NextRequest("http://localhost/api/records", {
