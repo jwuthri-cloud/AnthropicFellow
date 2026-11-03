@@ -11,20 +11,31 @@ export function inWorkspace<T>(request: NextRequest, fn: () => T): T {
   );
 }
 
+// Local-only by default. A deployment that puts its own login in front of the app
+// (Cloudflare Access, basic auth) opts in to its public hostnames with
+// PARALLAX_ALLOWED_HOSTS=parallax.example.com[,other.example.com].
+function allowedHosts() {
+  const extra = (process.env.PARALLAX_ALLOWED_HOSTS ?? "")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+  return new Set(["localhost", "127.0.0.1", ...extra]);
+}
+
 export function guard(request: NextRequest) {
+  const allowed = allowedHosts();
   const hostname = request.nextUrl.hostname;
-  const host = request.headers.get("host")?.split(":")[0];
-  if (
-    !["localhost", "127.0.0.1"].includes(hostname) ||
-    !host ||
-    !["localhost", "127.0.0.1"].includes(host)
-  )
+  const hostHeader = request.headers.get("host");
+  const host = hostHeader?.split(":")[0].toLowerCase();
+  if (!allowed.has(hostname) || !host || !allowed.has(host))
     throw new StoreError("Parallax is local-only", 403);
   const origin = request.headers.get("origin");
+  // Behind a TLS-terminating proxy the server sees http while the browser sends https.
   if (
     origin &&
     origin !== request.nextUrl.origin &&
-    origin !== `http://${request.headers.get("host")}`
+    origin !== `http://${hostHeader}` &&
+    origin !== `https://${hostHeader}`
   )
     throw new StoreError("Cross-origin requests are not allowed", 403);
   if (request.headers.get("sec-fetch-site") === "cross-site")

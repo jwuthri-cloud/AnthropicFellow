@@ -48,6 +48,48 @@ test("local API rejects hostile origins, cross-site requests, and DNS rebinding 
     /local-only/,
   );
 });
+test("PARALLAX_ALLOWED_HOSTS opts a proxied deployment in, and nothing else", () => {
+  const previous = process.env.PARALLAX_ALLOWED_HOSTS;
+  process.env.PARALLAX_ALLOWED_HOSTS = " Parallax.Example.com , ";
+  try {
+    const proxied = (headers: Record<string, string> = {}) =>
+      request(
+        { host: "parallax.example.com", ...headers },
+        "http://parallax.example.com/api/records",
+      );
+    assert.doesNotThrow(() => guard(proxied()));
+    assert.doesNotThrow(() =>
+      guard(
+        proxied({
+          origin: "https://parallax.example.com",
+          "sec-fetch-site": "same-origin",
+        }),
+      ),
+    );
+    assert.doesNotThrow(() => guard(request()));
+    assert.throws(
+      () => guard(proxied({ origin: "https://hostile.example" })),
+      /Cross-origin/,
+    );
+    assert.throws(
+      () => guard(proxied({ "sec-fetch-site": "cross-site" })),
+      /Cross-site/,
+    );
+    assert.throws(
+      () =>
+        guard(
+          request(
+            { host: "hostile.example" },
+            "http://hostile.example/api/records",
+          ),
+        ),
+      /local-only/,
+    );
+  } finally {
+    if (previous === undefined) delete process.env.PARALLAX_ALLOWED_HOSTS;
+    else process.env.PARALLAX_ALLOWED_HOSTS = previous;
+  }
+});
 test("malformed and oversized JSON produce controlled errors", async () => {
   const bad = new NextRequest("http://localhost/api/records", {
     method: "POST",

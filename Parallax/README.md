@@ -58,6 +58,8 @@ By default:
 
 Set `PARALLAX_DATA_DIR` to the shared storage root. `PARALLAX_RESEARCH_ROOT` chooses the original workspace’s source folder when its catalog entry is first created; new workspaces save their own optional source folder. Next.js reads `.env.local`; the MCP process needs matching environment values in its configuration. The MCP launcher resolves its working directory to this project, so it shares the correct database when launched from the Python repo.
 
+The API answers only requests addressed to `localhost` or `127.0.0.1`. To serve a deployed copy that sits behind its own login (Cloudflare Access, basic auth), list its public hostnames in `PARALLAX_ALLOWED_HOSTS` (comma-separated, e.g. `parallax.example.com`); same-origin and cross-site checks still apply.
+
 At first launch of the original workspace, the app snapshots `README.md` and `.md`, `.html`, and `.ipynb` files under `docs/` (up to 150 files, 5 MB per documentation file). The importer skips symlinks, hidden files, unchanged hashes, and other formats. Changed sources create **new linked snapshots**, preserving existing records and journals. Import again from Settings, or run `PARALLAX_WORKSPACE_ID=<id> npm run import` for a particular workspace (`default` is the original). Research source files are never edited or executed.
 
 Record writes use SQLite transactions, WAL, revision checks, and retained historical payloads. Journal text cannot be changed after saving. Journal pin metadata can change without changing its text. Add a linked follow-up for corrections. The activity log includes the authoring source (UI, repository import, or Claude Code).
