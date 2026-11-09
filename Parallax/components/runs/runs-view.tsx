@@ -146,6 +146,8 @@ const fmt = (v: unknown) =>
         : typeof v === "string"
           ? v
           : JSON.stringify(v);
+/** Config, summary and meta values: null there is just a missing value (in metrics it marks NaN/Inf). */
+const fmtField = (v: unknown) => (v === null ? "—" : fmt(v));
 
 /** Up to 3 metrics to show as columns: loss first, then the most common. */
 function keyMetrics(runs: RunSummary[]) {
@@ -748,7 +750,7 @@ function KeyValues({
             <tr key={k}>
               <td className="mono">{k}</td>
               <td className="mono">
-                {typeof v === "number" ? String(v) : fmt(v)}
+                {typeof v === "number" ? String(v) : fmtField(v)}
               </td>
             </tr>
           ))}
@@ -838,7 +840,7 @@ function CompareTables({ runs }: { runs: RunDetail[] }) {
                   <td className="mono">{k}</td>
                   {configs.map((c, i) => (
                     <td key={i} className="mono">
-                      {fmt(c[k])}
+                      {fmtField(c[k])}
                     </td>
                   ))}
                 </tr>
