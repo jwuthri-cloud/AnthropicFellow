@@ -50,6 +50,8 @@ import { ArtifactPreview, UploadButton } from "./records";
 import { hasSupportingExperiment } from "@/lib/research";
 import { Select } from "./select";
 import { BudgetInput } from "./budget-input";
+import { FieldDefinitionsEditor } from "./custom-fields";
+import { ReportKitCard } from "./report-kit";
 
 export function Board({
   workspace,
@@ -1050,6 +1052,13 @@ export function SettingsView({
             Export full workspace
           </a>
         </section>
+        <FieldDefinitionsEditor
+          key={JSON.stringify(workspace.fields)}
+          definitions={workspace.fields}
+          onChange={onChange}
+          notify={notify}
+        />
+        <ReportKitCard copy={copy} />
         <section className="settings-card mcp-settings">
           <div className="settings-title">
             <Terminal size={19} />
@@ -1071,6 +1080,11 @@ export function SettingsView({
               ["attach_file", "Preserve figures and notebooks"],
               ["session_handoff", "Resume with context"],
               ["get_record", "Read evidence and revision history"],
+              ["set_charts", "Arrange loss, accuracy and metric panels"],
+              ["define_fields", "Shape custom fields for this workspace"],
+              ["get_artifact_kit", "Write themed HTML reports"],
+              ["log_trace", "Record LLM traces for the Traces tab"],
+              ["list_runs", "Read live training runs from the Runs tab"],
             ].map(([name, description]) => (
               <div key={name}>
                 <code>{name}</code>

@@ -35,7 +35,7 @@ test("real MCP stdio client: tools, records, metrics, tasks, graph, attachments 
   try {
     await client.connect(transport);
     const tools = await client.listTools();
-    assert.equal(tools.tools.length, 18);
+    assert.equal(tools.tools.length, 33);
     const experiment = await call("create_record", {
       kind: "experiment",
       title: "Fixture only: MCP baseline",
@@ -45,7 +45,105 @@ test("real MCP stdio client: tools, records, metrics, tasks, graph, attachments 
       experimentId: experiment.id,
       metrics: [{ name: "fixture_only", step: 0, value: 0.25, n: 4 }],
     });
-    assert.equal(metrics.metrics[0].n, 4);
+    assert.deepEqual(
+      [metrics.added, metrics.skipped, metrics.total],
+      [1, 0, 1],
+    );
+    const logged = await call("get_record", { id: experiment.id });
+    assert.equal(logged.record.metrics[0].n, 4);
+    await call("log_trace", {
+      traceId: "fixture-trace",
+      experimentId: experiment.id,
+      spans: [
+        {
+          spanId: "root",
+          name: "Fixture agent",
+          type: "agent",
+          start: 0,
+          end: 10,
+        },
+        {
+          spanId: "llm",
+          parentSpanId: "root",
+          name: "chat",
+          type: "generation",
+          start: 1,
+          end: 9,
+          output: "x".repeat(5000),
+        },
+      ],
+    });
+    const listed = await call("list_traces", { experimentId: experiment.id });
+    assert.equal(listed.total, 1);
+    const trace = await call("get_trace", { traceId: "fixture-trace" });
+    assert.match(trace.spanList[1].output, /more characters; pass full: true/);
+    const traceFile = path.join(repo, "fixture-traces.jsonl");
+    writeFileSync(
+      traceFile,
+      JSON.stringify({
+        traceId: "fixture-2",
+        spanId: "a",
+        name: "imported",
+        start: 0,
+      }) + "\n",
+    );
+    const imported = await call("import_traces", { path: traceFile });
+    assert.deepEqual(
+      [imported.traces, imported.spans, imported.rejected],
+      [1, 1, []],
+    );
+    assert.equal((await call("list_trace_sessions")).total, 2);
+    const sent = await call("log_run_events", {
+      events: [
+        {
+          type: "start",
+          run: "fx-mcp-a",
+          name: "fixture a",
+          config: { lr: 0.1 },
+          experimentId: experiment.id,
+        },
+        { type: "log", run: "fx-mcp-a", step: 0, values: { "loss/train": 2 } },
+        { type: "log", run: "fx-mcp-a", step: 1, values: { "loss/train": 1 } },
+        { type: "start", run: "fx-mcp-b", config: { lr: 0.2 } },
+        { type: "log", run: "fx-mcp-b", step: 0, values: { "loss/train": 3 } },
+        { type: "finish", run: "fx-mcp-b", status: "failed" },
+      ],
+    });
+    assert.deepEqual([sent.runs.length, sent.points], [2, 3]);
+    assert.equal((await call("list_runs", { status: "failed" })).total, 1);
+    const run = await call("get_run", {
+      runId: "fx-mcp-a",
+      metrics: ["loss/train"],
+    });
+    assert.equal(run.metrics[0].min, 1);
+    assert.equal(run.series[0].points.length, 2);
+    const compared = await call("compare_runs", {
+      runIds: ["fx-mcp-a", "fx-mcp-b"],
+    });
+    assert.deepEqual(
+      compared.runs.map((r: { config: object }) => r.config),
+      [{ lr: 0.1 }, { lr: 0.2 }],
+    );
+    assert.equal(compared.metrics[0].runs["fx-mcp-b"].last, 3);
+    writeFileSync(
+      path.join(repo, "run.jsonl"),
+      JSON.stringify({
+        type: "log",
+        run: "fx-mcp-a",
+        step: 2,
+        values: { "loss/train": 0.5 },
+      }) + "\n",
+    );
+    assert.equal(
+      (await call("import_run_file", { path: path.join(repo, "run.jsonl") }))
+        .points,
+      1,
+    );
+    assert.equal(
+      (await call("update_run", { runId: "fx-mcp-a", tags: ["fixture"] }))
+        .tags[0],
+      "fixture",
+    );
     const finding = await call("create_record", {
       kind: "finding",
       title: "Fixture only: observation",
@@ -131,7 +229,8 @@ test("real MCP stdio client: tools, records, metrics, tasks, graph, attachments 
     );
     const record = await call("get_record", { id: experiment.id });
     assert.equal(record.artifacts.length, 1);
-    assert.equal(record.revisions.length, 2);
+    assert.equal(record.revisions.length, 1); // log_metrics writes no revision copy
+    assert.equal(record.record.revision, 2); // ...but bumps the revision
     const found = await call("search_research", { query: "MCP baseline" });
     assert.equal(found.length, 1);
     const handoff = await call("session_handoff");

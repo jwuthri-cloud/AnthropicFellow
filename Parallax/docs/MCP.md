@@ -59,6 +59,15 @@ All research tools accept an optional `workspaceId`. Omitting it uses `PARALLAX_
 | `import_repository`   | Snapshot the configured repository's documentation                                                                 |
 | `workspace_summary`   | Read counts, budgets, costs, and activity                                                                          |
 | `session_handoff`     | Read active tasks, recent journals, review items, and paper drafts                                                 |
+| `set_charts`          | Replace an experiment's chart panels (title, metrics, type, goal, smoothing, format)                               |
+| `list_fields`         | Read the workspace's custom field definitions                                                                      |
+| `define_fields`       | Replace the custom field list (call `list_fields` first)                                                           |
+| `get_artifact_kit`    | Read the HTML report kit reference and starter template                                                            |
+| `log_trace`           | Record one LLM trace as a tree of spans; re-sending a span replaces it                                             |
+| `import_traces`       | Import a JSONL file of traces or spans, or an OTLP/JSON export, from the research folder                           |
+| `list_traces`         | List traces with filters (text, status, model, experiment, session, time) and paging                               |
+| `get_trace`           | Read one trace's spans; input/output cut to 4,000 characters unless `full: true`                                   |
+| `list_trace_sessions` | List conversations: traces grouped by `sessionId`                                                                  |
 
 Resource: `parallax://research-contract` summarizes reproducibility, privacy, and evidence expectations.
 
@@ -109,3 +118,69 @@ Both the browser and agent can access your local research. This is not an author
 The `content` field remains plain Markdown. There is no editor-specific JSON format to maintain. Use GFM headings, nested lists, task lists, tables, quotes, fenced code (with a language), and standard inline formatting. The browser offers visual blocks and direct Markdown editing over this same field. Unsupported visual syntax stays editable in source mode; do not rewrite a document merely to make it fit the visual editor.
 
 After `attach_file` or `list_artifacts`, an agent can place a local image with `![Caption](/api/artifacts/ARTIFACT_UUID?workspaceId=WORKSPACE_ID)`, replacing both placeholders with the returned identifiers (`default` is the original workspace). PNG, JPEG, WebP and GIF images render inline; use `[File name](/api/artifacts/ARTIFACT_UUID?workspaceId=WORKSPACE_ID)` for other file types. Images from remote URLs are not fetched. Newly added local image/file references establish artifact backlinks atomically with record saves; foreign-workspace references fail. Associations remain when an embed is removed to preserve links for prior revisions. Use `link_artifact` for explicit association changes. Metric chart links continue to use `link_chart`.
+
+## LLM traces
+
+A trace is a tree of spans that share a `traceId`. Spans point to their parent with `parentSpanId`. Traces that share a `sessionId` form one conversation; a trace without one is its own session. Types: `GENERATION`, `AGENT`, `TOOL`, `CHAIN`, `RETRIEVER`, `EMBEDDING`, `GUARDRAIL`, `THINKING`, `DELEGATE`, `SKILL`, `SPAN`, `EVENT`, `EVALUATOR`.
+
+`log_trace` (also `POST /api/traces`, limit 10 MB):
+
+```json
+{
+  "traceId": "run-42-item-7",
+  "sessionId": "conversation-7",
+  "experimentId": "<experiment UUID>",
+  "spans": [
+    {
+      "spanId": "root",
+      "name": "agent",
+      "type": "agent",
+      "start": "2026-11-08T10:00:00Z",
+      "end": "2026-11-08T10:00:04Z"
+    },
+    {
+      "spanId": "llm-1",
+      "parentSpanId": "root",
+      "name": "chat",
+      "type": "generation",
+      "start": 1762596000100,
+      "end": 1762596001900,
+      "model": "<model id>",
+      "usage": { "input": 812, "output": 64 },
+      "input": [{ "role": "user", "content": "…" }],
+      "output": [{ "role": "assistant", "content": "…", "tool_calls": [] }],
+      "metadata": { "temperature": 0.2 }
+    }
+  ]
+}
+```
+
+- Times are ISO 8601 or epoch milliseconds. `status: "error"` with `statusMessage` marks a failure.
+- `input`/`output` take text or JSON. Chat message lists, OpenAI request/response envelopes and Anthropic content blocks are shown as formatted messages. Each is cut at 256 KB with a marker.
+- Give `costUsd` only when the provider reported it. Parallax never estimates cost.
+- A span sent again with the same `traceId` and `spanId` replaces the stored span.
+
+`import_traces(path)` reads a file inside the research folder. Each line of a `.jsonl` file is a trace (the shape above), or one span with its own `traceId` (spans of one trace are grouped). A file that is a single OTLP/JSON export (`{"resourceSpans": …}`) is also accepted. The result lists rejected lines with the reason. Copy result files back from the cluster first.
+
+### OpenTelemetry (OTLP/HTTP, JSON)
+
+Point an exporter at the running app:
+
+```bash
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://127.0.0.1:3000/v1/traces?workspaceId=<workspace id>"
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/json
+```
+
+The workspace can also come from an `x-parallax-workspace` header. Protobuf requests get `415`. The endpoint is local-only like the rest of the app. The mapping is a port of Tracely's: OTel GenAI attributes and events, OpenInference, OpenLLMetry and the Vercel AI SDK, plus LangChain message serializations. A recorded `exception` event or `error.type` marks a span as failed unless its status is explicitly OK. Set the resource or span attribute `parallax.experiment_id` to link an experiment, and `session.id` or `gen_ai.conversation.id` to group a conversation.
+
+## Runs (live training telemetry)
+
+The Runs tab is a small W&B-style tracker. Each run has a config, meta (host, git commit, command, GPUs, Slurm job), a status and metric series. The status is running, finished, failed, killed, or stalled (still running, but no event for 5 minutes).
+
+- Training code: `clients/python/parallax_track.py` (stdlib only; see its README). It posts events to `POST /api/runs?workspaceId=<id>` as `{"events": [...]}`, or writes a JSONL event log to sync later.
+- Events: `start` (resumes a known run), `log` (`step`, `values`; `null` = NaN/Inf), `config`, `summary` (merged), `heartbeat`, `finish`. Re-sent points replace stored ones.
+- MCP: `log_run_events`, `import_run_file`, `list_runs`, `get_run` (stats and, on request, downsampled series), `compare_runs` (config diff and per-metric last/min/max), `update_run`.
+- HTTP reads: `GET /api/runs`, `GET /api/runs/<id>`, `GET /api/run-series?runs=a,b&name=loss/train&maxPoints=1000`. A series longer than `maxPoints` is returned as equal step buckets: the mean, plus the bucket's min and max.
+- Dashboard: charts are grouped from metric names into Loss, Metrics, Optimization and System sections. Train and val splits of one metric share a chart. You can switch the x axis between step and relative time, and set smoothing, log scale and a filter. Running runs refresh every 2.5 s. To compare, select runs and overlay them.
+- Demo data: `seeds/demo-runs.jsonl` holds 4 SYNTHETIC runs (made by `seeds/make-demo-runs.py`, deterministic). Their ids start with `demo-`, they have the tag `demo`, and their note says they are synthetic. Load them with **Load demo runs** on the empty Runs tab or `POST /api/run-demo`. Loading again replaces them, and the times are shifted so the runs look recent. Remove them with the banner button or `DELETE /api/run-demo`, which deletes only `demo-` runs that have the `demo` tag. They are never results.
+- Live demo: **Simulate live run** (on the run list and the empty state) streams a SYNTHETIC run from the browser to `POST /api/runs`: 600 steps at 4 steps/s (about 2.5 min), val every 25 steps, and 2-GPU system metrics every 5 s. It has the id `demo-live-…`, the tag `demo` and the group `demo-live`. It runs while the page is open; **Stop simulation** marks it killed, and closing the page leaves it stalled. **Remove demo runs** stops all simulations first and then deletes them.

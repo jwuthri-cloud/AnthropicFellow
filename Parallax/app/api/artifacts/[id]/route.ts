@@ -1,4 +1,5 @@
 import { htmlPreviewPolicy } from "@/lib/preview";
+import { withArtifactKit } from "@/lib/artifact-kit";
 import { NextRequest, NextResponse } from "next/server";
 import { getArtifact, updateArtifactLinks } from "@/lib/store";
 import { inWorkspace, errorResponse, jsonBody } from "@/lib/http";
@@ -14,7 +15,14 @@ export async function GET(
         request.nextUrl.searchParams.has("preview") &&
         ["text/html", "image/svg+xml"].includes(artifact.mime)
       ) {
-        return new NextResponse(new Uint8Array(buffer), {
+        const body =
+          artifact.mime === "text/html"
+            ? withArtifactKit(
+                buffer.toString("utf8"),
+                request.nextUrl.searchParams.get("theme"),
+              )
+            : buffer;
+        return new NextResponse(body, {
           headers: {
             "Content-Type": artifact.mime + "; charset=utf-8",
             "Content-Security-Policy": htmlPreviewPolicy,

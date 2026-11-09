@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/manrope";
+import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/500.css";
+import "@fontsource/manrope/600.css";
+import "@fontsource/manrope/700.css";
+import "@fontsource/manrope/800.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "./globals.css";
 import "./themes.css";
 import "./documents.css";
+import "@/lib/kit/chart.css";
+import "./tracely.css";
+import "./traces.css";
+import "./runs.css";
 export const metadata: Metadata = {
   icons: { icon: "/icon.svg" },
   title: "Parallax — Research, in perspective.",

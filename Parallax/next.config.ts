@@ -4,6 +4,11 @@ const privateStore = path.relative(
   process.cwd(),
   path.resolve(process.env.PARALLAX_DATA_DIR || "data"),
 );
+// File tracing only reads inside the project, so a store outside it (a devbox
+// with PARALLAX_DATA_DIR=~/parallax-data) needs no exclude, and Turbopack
+// rejects globs that leave the project root.
+const storeInsideProject =
+  !privateStore.startsWith("..") && !path.isAbsolute(privateStore);
 const config: NextConfig = {
   poweredByHeader: false,
   devIndicators: false,
@@ -11,7 +16,7 @@ const config: NextConfig = {
   outputFileTracingExcludes: {
     "/*": [
       "./data/**/*",
-      `${privateStore}/**/*`,
+      ...(storeInsideProject ? [`${privateStore}/**/*`] : []),
       "./.env*",
       "./docs/screenshots/**/*",
     ],

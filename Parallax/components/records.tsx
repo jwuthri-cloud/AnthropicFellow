@@ -8,6 +8,10 @@ import {
 } from "./evidence-links";
 import { Markdown } from "./document-reader";
 import { DocumentEditor } from "./document-editor";
+import { ExperimentCharts, LinkedChart } from "./metric-charts";
+import { ExperimentTraces } from "./traces/experiment-traces";
+import { ExperimentRuns } from "./runs/runs-view";
+import { CustomFieldInputs, CustomFieldSummary } from "./custom-fields";
 export { Markdown } from "./document-reader";
 import { z } from "zod";
 import {
@@ -90,8 +94,12 @@ export function RecordEditor({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [tags, setTags] = useState(record?.tags.join(", ") || "");
-  const [metrics, setMetrics] = useState(
+  const [initialMetrics] = useState(() =>
     JSON.stringify(record?.metrics || [], null, 2),
+  );
+  const [metrics, setMetrics] = useState(initialMetrics);
+  const [charts, setCharts] = useState(
+    JSON.stringify(record?.charts || [], null, 2),
   );
   const [dirty, setDirty] = useState(false);
   const update = (value: Partial<typeof draft>) => {
@@ -112,19 +120,24 @@ export function RecordEditor({
     setSaving(true);
     setError("");
     try {
-      const input = recordInputSchema.parse({
+      // Send points only when they were edited: the server keeps stored metrics when
+      // the body has no `metrics` key (telemetry can stream points while this is open).
+      const metricsEdited = !record || metrics !== initialMetrics;
+      const { metrics: points, ...input } = recordInputSchema.parse({
         ...draft,
         tags: tags
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
-        metrics: JSON.parse(metrics),
+        ...(metricsEdited ? { metrics: JSON.parse(metrics) } : {}),
+        charts: JSON.parse(charts),
         ...(record ? { revision: record.revision } : {}),
       });
       await api(
         record ? `/api/records/${record.id}` : "/api/records",
         jsonOptions(record ? "PATCH" : "POST", {
           ...input,
+          ...(metricsEdited ? { metrics: points } : {}),
           ...(record ? { revision: record.revision } : {}),
         }),
       );
@@ -207,6 +220,12 @@ export function RecordEditor({
             </label>
           )}
         </div>
+        <CustomFieldInputs
+          kind={kind}
+          definitions={workspace.fields}
+          values={draft.fields}
+          onChange={(fields) => update({ fields })}
+        />
         {kind === "task" && (
           <div className="form-grid three">
             <label>
@@ -469,8 +488,30 @@ export function RecordEditor({
               />
             </label>
             <p className="field-help">
-              Each item: name, step, value, optional unit, n, lower, upper. Only
-              record actual measurements. Agents can append via log_metrics.
+              Each item: name, step, value, optional unit, n, lower, upper. Name
+              related series group/series (loss/train, loss/val) to share a
+              chart. Only record actual measurements. Agents can append via
+              log_metrics.
+            </p>
+            <label>
+              Chart panels · JSON
+              <textarea
+                rows={6}
+                className="code-input"
+                placeholder='[{ "title": "Loss", "metrics": ["loss/*"], "goal": "min", "smoothing": 0.6 }]'
+                value={charts}
+                onChange={(e) => {
+                  setCharts(e.target.value);
+                  setDirty(true);
+                }}
+              />
+            </label>
+            <p className="field-help">
+              Optional. Each panel: title, metrics (names or group/*), type line
+              | bar | scatter, xLabel, yLabel, format auto | percent | fixed |
+              scientific, logY, smoothing 0–0.99, goal min | max. Metrics
+              outside every panel are grouped automatically. Agents can use
+              set_charts.
             </p>
           </div>
         )}
@@ -674,6 +715,10 @@ export function RecordDetail({
               </span>
             ))}
           </div>
+          <CustomFieldSummary
+            definitions={workspace.fields}
+            values={record.fields}
+          />
           <div className="tabs detail-tabs">
             <button
               onClick={() => setTab("entry")}
@@ -762,7 +807,9 @@ export function RecordDetail({
                       <p>{record.gate}</p>
                     </div>
                   )}
-                  <MetricsChart record={record} onLink={setChartToLink} />
+                  <ExperimentCharts record={record} onLink={setChartToLink} />
+                  <ExperimentRuns experimentId={record.id} />
+                  <ExperimentTraces experimentId={record.id} />
                 </>
               )}
               {record.kind === "task" && (
@@ -816,10 +863,7 @@ export function RecordDetail({
                             Unlink
                           </button>
                         </div>
-                        <MetricsChart
-                          record={source}
-                          metricName={link.metricName}
-                        />
+                        <LinkedChart record={source} name={link.metricName} />
                         <p className="form-hint">
                           Live source · revision {source.revision} · linking
                           does not establish scientific support.
@@ -1012,174 +1056,6 @@ export function RecordDetail({
   );
 }
 
-export function MetricsChart({
-  record,
-  metricName,
-  onLink,
-}: {
-  record: ResearchRecord;
-  metricName?: string;
-  onLink?: (name: string) => void;
-}) {
-  const names = [...new Set(record.metrics.map((m) => m.name))];
-  const [name, setName] = useState(names[0] || "");
-  const selectedName = metricName || (names.includes(name) ? name : names[0]);
-  if (!names.length || (metricName && !names.includes(metricName)))
-    return (
-      <div className="metrics-empty">
-        <div className="empty-chart-lines">
-          <i />
-          <i />
-          <i />
-        </div>
-        <span>No measured metrics yet</span>
-        <small>Log a real result to bring this chart to life.</small>
-      </div>
-    );
-  const points = record.metrics
-    .filter((m) => m.name === selectedName)
-    .sort((a, b) => a.step - b.step);
-  const minX = Math.min(...points.map((p) => p.step)),
-    maxX = Math.max(...points.map((p) => p.step));
-  const minY = Math.min(...points.map((p) => p.lower ?? p.value)),
-    maxY = Math.max(...points.map((p) => p.upper ?? p.value));
-  const spanY = maxY - minY || Math.max(1, Math.abs(maxY) * 0.1);
-  const lowY = minY - spanY * 0.15,
-    highY = maxY + spanY * 0.15;
-  const x = (v: number) => 64 + ((v - minX) / (maxX - minX || 1)) * 590;
-  const y = (v: number) => 198 - ((v - lowY) / (highY - lowY)) * 160;
-  return (
-    <div className="metrics-chart">
-      <div className="chart-heading">
-        <span className="eyebrow">MEASURED SIGNAL</span>
-        {onLink && (
-          <button
-            className="button secondary compact"
-            onClick={() => onLink(selectedName)}
-          >
-            <Link2 size={13} />
-            Link chart
-          </button>
-        )}
-        <Select
-          disabled={!!metricName}
-          label="Metric"
-          value={selectedName}
-          onValueChange={setName}
-          options={names.map((value) => ({ value, label: value }))}
-        />
-      </div>
-      <svg
-        viewBox="0 0 710 240"
-        role="img"
-        aria-label={`${selectedName} versus step, ${points.length} measured points`}
-      >
-        {Array.from({ length: 5 }, (_, i) => {
-          const value = lowY + ((highY - lowY) * i) / 4;
-          return (
-            <g key={i}>
-              <line
-                x1="64"
-                y1={y(value)}
-                x2="664"
-                y2={y(value)}
-                stroke="var(--border)"
-                strokeDasharray="3 5"
-              />
-              <text
-                x="54"
-                y={y(value) + 3}
-                fill="var(--muted)"
-                fontSize="10"
-                textAnchor="end"
-              >
-                {Number(value.toPrecision(3))}
-              </text>
-            </g>
-          );
-        })}
-        <polyline
-          points={points.map((p) => `${x(p.step)},${y(p.value)}`).join(" ")}
-          fill="none"
-          stroke="var(--lime)"
-          strokeWidth="2"
-        />
-        {points.map((p, i) => (
-          <g key={i}>
-            {p.lower !== undefined && p.upper !== undefined && (
-              <>
-                <line
-                  x1={x(p.step)}
-                  y1={y(p.lower)}
-                  x2={x(p.step)}
-                  y2={y(p.upper)}
-                  stroke="var(--lime)"
-                  opacity=".6"
-                />
-                <path
-                  d={`M${x(p.step) - 4},${y(p.lower)}h8 M${x(p.step) - 4},${y(p.upper)}h8`}
-                  stroke="var(--lime)"
-                />
-              </>
-            )}
-            <circle cx={x(p.step)} cy={y(p.value)} r="3.5" fill="var(--lime)">
-              <title>
-                {p.name}: {p.value} {p.unit} · step {p.step}
-                {p.n ? ` · n=${p.n}` : ""}
-              </title>
-            </circle>
-          </g>
-        ))}
-        <text x="64" y="219" fill="var(--muted)" fontSize="10">
-          {minX}
-        </text>
-        <text x="650" y="219" fill="var(--muted)" fontSize="10">
-          {maxX}
-        </text>
-        <text
-          x="355"
-          y="232"
-          fill="var(--muted)"
-          fontSize="9"
-          textAnchor="middle"
-        >
-          STEP
-        </text>
-      </svg>
-      <details>
-        <summary>
-          View {points.length} measurements{" "}
-          {points[0]?.unit ? `· ${points[0].unit}` : ""}
-        </summary>
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Step</th>
-                <th>Value</th>
-                <th>n</th>
-                <th>Lower</th>
-                <th>Upper</th>
-              </tr>
-            </thead>
-            <tbody>
-              {points.map((p, i) => (
-                <tr key={i}>
-                  <td>{p.step}</td>
-                  <td>{p.value}</td>
-                  <td>{p.n ?? "—"}</td>
-                  <td>{p.lower ?? "—"}</td>
-                  <td>{p.upper ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
-    </div>
-  );
-}
-
 export function UploadButton({
   recordId,
   onChange,
@@ -1358,13 +1234,16 @@ export function ArtifactPreview({
           <>
             <div className="notice">
               Interactive preview · runs in an isolated frame. External
-              resources stay offline; use a self-contained HTML export.
+              resources stay offline; use a self-contained HTML export. Reports
+              using the Parallax kit follow your theme.
             </div>
             <iframe
               title={artifact.name}
               sandbox="allow-scripts"
               referrerPolicy="no-referrer"
-              src={url(`/api/artifacts/${artifact.id}?preview`)}
+              src={url(
+                `/api/artifacts/${artifact.id}?preview&theme=${document.documentElement.dataset.theme || "moss"}`,
+              )}
               className="html-preview"
             />
           </>

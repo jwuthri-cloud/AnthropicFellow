@@ -22,6 +22,8 @@ import {
   Activity,
   X,
   RefreshCw,
+  Waypoints,
+  LineChart,
 } from "lucide-react";
 import type { Workspace, ResearchRecord } from "@/lib/schema";
 import {
@@ -49,6 +51,8 @@ import {
   Handoff,
   ManuscriptView,
 } from "./views";
+import { TracesView } from "./traces/traces-view";
+import { RunsView } from "./runs/runs-view";
 
 type View =
   | "overview"
@@ -59,6 +63,8 @@ type View =
   | "graph"
   | "artifacts"
   | "manuscript"
+  | "traces"
+  | "runs"
   | "settings";
 const navigation: {
   id: View;
@@ -78,6 +84,8 @@ const navigation: {
   { id: "notebook", label: "Notebook", icon: BookOpen },
   { id: "graph", label: "Knowledge graph", icon: Network },
   { id: "artifacts", label: "Figures & files", icon: Images },
+  { id: "runs", label: "Runs", icon: LineChart },
+  { id: "traces", label: "Traces", icon: Waypoints },
   { id: "manuscript", label: "Manuscript", icon: ScrollText },
 ];
 export function Observatory() {
@@ -189,9 +197,17 @@ function WorkspaceScreen({
     return () => window.removeEventListener("keydown", key);
   }, [editor, selected]);
   useEffect(() => {
-    const hash = window.location.hash.slice(1);
-    if ([...navigation.map((n) => n.id), "settings"].includes(hash))
-      setView(hash as View);
+    // The Traces tab keeps its own state after the view id: #traces/trace/<id>, #traces?q=…
+    const sync = () => {
+      const hash = window.location.hash.slice(1).split(/[/?]/)[0];
+      if ([...navigation.map((n) => n.id), "settings"].includes(hash)) {
+        setView(hash as View);
+        if (hash === "traces" || hash === "runs") setSelected(null);
+      }
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
   }, []);
   const navigate = (id: View) => {
     setView(id);
@@ -412,65 +428,68 @@ function WorkspaceScreen({
             </div>
           ) : (
             <>
-              <div className="page-heading">
-                <div>
-                  <div className="eyebrow">
-                    {view === "overview"
-                      ? "YOUR RESEARCH, CONNECTED"
-                      : "PARALLAX / RESEARCH WORKSPACE"}
+              {/* The Traces tab wears Tracely's own page header. */}
+              {view !== "traces" && (
+                <div className="page-heading">
+                  <div>
+                    <div className="eyebrow">
+                      {view === "overview"
+                        ? "YOUR RESEARCH, CONNECTED"
+                        : "PARALLAX / RESEARCH WORKSPACE"}
+                    </div>
+                    <h1>
+                      {view === "overview"
+                        ? "Observatory"
+                        : viewMeta?.label || "Workspace settings"}
+                      <span className="heading-period">.</span>
+                    </h1>
                   </div>
-                  <h1>
-                    {view === "overview"
-                      ? "Observatory"
-                      : viewMeta?.label || "Workspace settings"}
-                    <span className="heading-period">.</span>
-                  </h1>
-                </div>
-                <div className="heading-actions">
-                  {view === "overview" && (
-                    <span className="today">
-                      {new Date().toLocaleDateString("en-US", {
-                        weekday: "short",
-                        month: "short",
-                        day: "2-digit",
-                      })}
-                    </span>
-                  )}
-                  <div className="new-button-wrap">
-                    <button
-                      className="button primary"
-                      onClick={() => setNewMenu(!newMenu)}
-                    >
-                      <Plus size={16} />
-                      New entry
-                      <ChevronDown size={13} />
-                    </button>
-                    {newMenu && (
-                      <>
-                        <button
-                          className="menu-scrim"
-                          aria-label="Close new-entry menu"
-                          onClick={() => setNewMenu(false)}
-                        />
-                        <div className="dropdown new-menu">
-                          {Object.entries(kindMeta).map(([kind, meta]) => (
-                            <button
-                              key={kind}
-                              onClick={() =>
-                                create(kind as ResearchRecord["kind"])
-                              }
-                            >
-                              <meta.icon size={16} />
-                              {meta.label}
-                              <span>↗</span>
-                            </button>
-                          ))}
-                        </div>
-                      </>
+                  <div className="heading-actions">
+                    {view === "overview" && (
+                      <span className="today">
+                        {new Date().toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "2-digit",
+                        })}
+                      </span>
                     )}
+                    <div className="new-button-wrap">
+                      <button
+                        className="button primary"
+                        onClick={() => setNewMenu(!newMenu)}
+                      >
+                        <Plus size={16} />
+                        New entry
+                        <ChevronDown size={13} />
+                      </button>
+                      {newMenu && (
+                        <>
+                          <button
+                            className="menu-scrim"
+                            aria-label="Close new-entry menu"
+                            onClick={() => setNewMenu(false)}
+                          />
+                          <div className="dropdown new-menu">
+                            {Object.entries(kindMeta).map(([kind, meta]) => (
+                              <button
+                                key={kind}
+                                onClick={() =>
+                                  create(kind as ResearchRecord["kind"])
+                                }
+                              >
+                                <meta.icon size={16} />
+                                {meta.label}
+                                <span>↗</span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
               {view === "overview" && (
                 <>
                   <section className="hero">
@@ -890,6 +909,12 @@ function WorkspaceScreen({
                   onOpen={open}
                   onCreate={() => create("paper")}
                 />
+              )}
+              {view === "runs" && (
+                <RunsView records={workspace.records} onOpenRecord={open} />
+              )}
+              {view === "traces" && (
+                <TracesView records={workspace.records} onOpenRecord={open} />
               )}
               {view === "settings" && (
                 <SettingsView

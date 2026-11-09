@@ -14,6 +14,10 @@ import path from "node:path";
 import {
   recordInputSchema,
   metricSchema,
+  chartSpecSchema,
+  fieldDefinitionsSchema,
+  type FieldDefinition,
+  type FieldValue,
   type ResearchRecord,
   type Artifact,
   type Activity,
@@ -22,6 +26,7 @@ import {
   type ChartLink,
 } from "./schema";
 import { z } from "zod";
+import { panelForLink } from "./charts";
 
 import {
   dataDir,
@@ -51,6 +56,15 @@ export function db() {
     CREATE TABLE IF NOT EXISTS imports (source TEXT PRIMARY KEY, hash TEXT NOT NULL, record_id TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS chart_links (id TEXT PRIMARY KEY, experimentId TEXT NOT NULL REFERENCES records(id), metricName TEXT NOT NULL, recordId TEXT NOT NULL REFERENCES records(id), UNIQUE(experimentId,metricName,recordId));
     CREATE TABLE IF NOT EXISTS relations (id TEXT PRIMARY KEY, source TEXT NOT NULL REFERENCES records(id), target TEXT NOT NULL REFERENCES records(id), type TEXT NOT NULL, label TEXT NOT NULL, UNIQUE(source, target, type));
+    CREATE TABLE IF NOT EXISTS metric_points (record_id TEXT NOT NULL, name TEXT NOT NULL, step REAL NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(record_id, name, step)) WITHOUT ROWID;
+    CREATE TABLE IF NOT EXISTS trace_spans (trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, session_id TEXT, experiment_id TEXT, name TEXT NOT NULL, type TEXT NOT NULL, level TEXT NOT NULL, status_message TEXT NOT NULL, start_ms INTEGER NOT NULL, end_ms INTEGER, ttft_ms INTEGER, model TEXT NOT NULL, input_tokens INTEGER, output_tokens INTEGER, cost_usd REAL, input TEXT, output TEXT, metadata TEXT NOT NULL, source TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(trace_id, span_id)) WITHOUT ROWID;
+    CREATE INDEX IF NOT EXISTS trace_spans_start ON trace_spans(start_ms);
+    CREATE INDEX IF NOT EXISTS trace_spans_session ON trace_spans(session_id);
+    CREATE INDEX IF NOT EXISTS trace_spans_experiment ON trace_spans(experiment_id);
+    CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, name TEXT NOT NULL, run_group TEXT NOT NULL, tags TEXT NOT NULL, notes TEXT NOT NULL, experiment_id TEXT, status TEXT NOT NULL, exit_code INTEGER, config TEXT NOT NULL, summary TEXT NOT NULL, meta TEXT NOT NULL, started_ms INTEGER NOT NULL, last_ms INTEGER NOT NULL, ended_ms INTEGER);
+    CREATE INDEX IF NOT EXISTS runs_last ON runs(last_ms);
+    CREATE TABLE IF NOT EXISTS run_points (run_id TEXT NOT NULL, name TEXT NOT NULL, step REAL NOT NULL, time_ms INTEGER NOT NULL, value REAL, PRIMARY KEY(run_id, name, step)) WITHOUT ROWID;
+    CREATE TABLE IF NOT EXISTS run_metrics (run_id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER NOT NULL, last_step REAL NOT NULL, last REAL, min REAL, max REAL, non_finite INTEGER NOT NULL, first_non_finite_step REAL, PRIMARY KEY(run_id, name)) WITHOUT ROWID;
   `);
   connections.set(folder, connection);
   return connection;
@@ -73,7 +87,7 @@ export function transaction<T>(fn: () => T): T {
   }
 }
 
-function log(
+export function log(
   action: string,
   recordId: string | null,
   title: string,
@@ -86,8 +100,71 @@ function log(
     .run(action, recordId, title, actor, new Date().toISOString());
 }
 
-export function listRecords(query = "", kind = ""): ResearchRecord[] {
+// Metrics live in their own append-only table, so an append costs the new points
+// only, not a copy of the whole record in its revision history. Payloads written by
+// older Parallax versions (or older processes still running) keep points inline;
+// reads merge both, and the next write of the record moves them into the table.
+type Metric = ResearchRecord["metrics"][number];
+const metricKey = (m: { name: string; step: number }) => `${m.name}:${m.step}`;
+
+function metricRows(id?: string) {
+  return (
+    id
+      ? db()
+          .prepare(
+            "SELECT record_id, payload FROM metric_points WHERE record_id = ? ORDER BY name, step",
+          )
+          .all(id)
+      : db()
+          .prepare(
+            "SELECT record_id, payload FROM metric_points ORDER BY record_id, name, step",
+          )
+          .all()
+  ) as { record_id: string; payload: string }[];
+}
+
+function withMetrics(record: ResearchRecord, stored: Metric[]): ResearchRecord {
+  const keys = new Set(stored.map(metricKey));
+  const inline = (record.metrics ?? []).filter((m) => !keys.has(metricKey(m)));
+  return { ...record, metrics: [...stored, ...inline] };
+}
+
+function insertMetrics(id: string, metrics: Metric[]) {
+  const insert = db().prepare(
+    "INSERT OR IGNORE INTO metric_points(record_id, name, step, payload) VALUES (?, ?, ?, ?)",
+  );
+  for (const m of metrics) insert.run(id, m.name, m.step, JSON.stringify(m));
+}
+
+/** Store the record without its points; first move any inline points of the stored payload. */
+function writePayload(record: ResearchRecord, adoptInline: boolean) {
+  if (adoptInline) {
+    const row = db()
+      .prepare("SELECT payload FROM records WHERE id = ?")
+      .get(record.id) as { payload: string } | undefined;
+    if (row) insertMetrics(record.id, JSON.parse(row.payload).metrics ?? []);
+  }
+  const payload = JSON.stringify({ ...record, metrics: [] });
+  db()
+    .prepare(
+      "INSERT INTO records(id, payload) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET payload = excluded.payload",
+    )
+    .run(record.id, payload);
+  return payload;
+}
+
+export function listRecords(
+  query = "",
+  kind = "",
+  fields: Record<string, FieldValue> = {},
+): ResearchRecord[] {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const stored = new Map<string, Metric[]>();
+  for (const row of metricRows()) {
+    const list = stored.get(row.record_id) ?? [];
+    list.push(JSON.parse(row.payload));
+    stored.set(row.record_id, list);
+  }
   return (
     db().prepare("SELECT payload FROM records").all() as { payload: string }[]
   )
@@ -95,12 +172,16 @@ export function listRecords(query = "", kind = ""): ResearchRecord[] {
     .filter(
       (r) =>
         (!kind || r.kind === kind) &&
+        Object.entries(fields).every(
+          ([k, v]) => (r.fields?.[k] ?? null) === v,
+        ) &&
         terms.every((t) =>
-          `${r.title} ${r.content} ${r.tags.join(" ")} ${JSON.stringify(r.provenance)}`
+          `${r.title} ${r.content} ${r.tags.join(" ")} ${JSON.stringify(r.provenance)} ${JSON.stringify(r.fields ?? {})}`
             .toLowerCase()
             .includes(t),
         ),
     )
+    .map((r) => withMetrics(r, stored.get(r.id) ?? []))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
@@ -110,22 +191,62 @@ export function getRecord(id: string): ResearchRecord {
     .get(id) as { payload: string } | undefined;
   if (!row) throw new StoreError("Record not found", 404);
   const record = JSON.parse(row.payload);
-  return { ...recordInputSchema.parse(record), ...record };
+  return withMetrics(
+    { ...recordInputSchema.parse(record), ...record },
+    metricRows(id).map((r) => JSON.parse(r.payload)),
+  );
 }
 
 function validateLinks(ids: string[]) {
   for (const id of ids) getRecord(id);
 }
 
-function persist(record: ResearchRecord, action: string, actor: string) {
+/** Values must match their definition. Undefined keys survive only if already stored. */
+function validateFields(
+  kind: ResearchRecord["kind"],
+  fields: Record<string, FieldValue>,
+  previous: Record<string, FieldValue> = {},
+) {
+  const definitions = new Map(getFieldDefinitions().map((f) => [f.key, f]));
+  for (const [key, value] of Object.entries(fields)) {
+    const field = definitions.get(key);
+    if (!field || !field.kinds.includes(kind)) {
+      if (key in previous) continue;
+      throw new StoreError(
+        `Unknown field "${key}" for ${kind} entries. Define it in Settings or with define_fields first.`,
+      );
+    }
+    if (value === null) continue;
+    const ok =
+      field.type === "number"
+        ? typeof value === "number"
+        : field.type === "boolean"
+          ? typeof value === "boolean"
+          : field.type === "select"
+            ? typeof value === "string" && field.options.includes(value)
+            : typeof value === "string";
+    if (!ok)
+      throw new StoreError(
+        field.type === "select"
+          ? `Field "${key}" must be one of: ${field.options.join(", ")}`
+          : `Field "${key}" must be a ${field.type}`,
+      );
+  }
+}
+
+/**
+ * Write the record and a revision. Points stay in metric_points: callers that change
+ * them do it explicitly, and pass adoptInline=false when they replace the whole set.
+ */
+function persist(
+  record: ResearchRecord,
+  action: string,
+  actor: string,
+  adoptInline = true,
+) {
   const previousContent =
     action === "updated" ? getRecord(record.id).content : "";
-  const payload = JSON.stringify(record);
-  db()
-    .prepare(
-      "INSERT INTO records(id, payload) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET payload = excluded.payload",
-    )
-    .run(record.id, payload);
+  const payload = writePayload(record, adoptInline);
   db()
     .prepare(
       "INSERT INTO revisions(record_id, revision, payload) VALUES (?, ?, ?)",
@@ -161,8 +282,9 @@ export function createRecord(input: unknown, actor = "Julien") {
   const value = recordInputSchema.parse(input);
   return transaction(() => {
     validateLinks(value.linkedIds);
+    validateFields(value.kind, value.fields);
     const now = new Date().toISOString();
-    return persist(
+    const record = persist(
       {
         ...value,
         id: randomUUID(),
@@ -174,15 +296,23 @@ export function createRecord(input: unknown, actor = "Julien") {
       "created",
       actor,
     );
+    insertMetrics(record.id, value.metrics);
+    return record;
   });
 }
 
+/**
+ * Replace a record. Its metrics are replaced only when the input has a `metrics` key
+ * (the app's editor); without one (MCP update_record) the measured points are kept.
+ */
 export function updateRecord(
   id: string,
   input: unknown,
   revision: number,
   actor = "Julien",
 ) {
+  const replaceMetrics =
+    typeof input === "object" && input !== null && "metrics" in input;
   return transaction(() => {
     const existing = getRecord(id);
     if (existing.revision !== revision)
@@ -195,19 +325,26 @@ export function updateRecord(
         "Journal entries are immutable. Add a new entry linked to this one.",
         409,
       );
-    const value = recordInputSchema.parse(input);
+    const { metrics, ...value } = recordInputSchema.parse(input);
     if (value.kind !== existing.kind)
       throw new StoreError("Record type cannot be changed");
     validateLinks(value.linkedIds);
+    validateFields(value.kind, value.fields, existing.fields);
+    if (replaceMetrics) {
+      db().prepare("DELETE FROM metric_points WHERE record_id = ?").run(id);
+      insertMetrics(id, metrics);
+    }
     return persist(
       {
         ...existing,
         ...value,
+        metrics: replaceMetrics ? metrics : existing.metrics,
         updatedAt: new Date().toISOString(),
         revision: existing.revision + 1,
       },
       "updated",
       actor,
+      !replaceMetrics,
     );
   });
 }
@@ -267,6 +404,8 @@ export function deleteRecord(id: string, revision: number, actor = "Julien") {
       "DELETE FROM relations WHERE source = ?1 OR target = ?1",
       "DELETE FROM chart_links WHERE experimentId = ?1 OR recordId = ?1",
       "DELETE FROM imports WHERE record_id = ?1",
+      "DELETE FROM metric_points WHERE record_id = ?1",
+      "UPDATE runs SET experiment_id = NULL WHERE experiment_id = ?1",
       "DELETE FROM records WHERE id = ?1",
     ])
       db().prepare(sql).run(id);
@@ -275,38 +414,82 @@ export function deleteRecord(id: string, revision: number, actor = "Julien") {
   });
 }
 
+/**
+ * Append points to an experiment. A point whose name+step is already stored is an
+ * error, or is skipped with onDuplicate "skip" (telemetry re-sent after a job resumes).
+ * Appends write no revision copy, but they bump the revision so an edit based on an
+ * older read cannot replace the new points.
+ */
 export function appendMetrics(
   id: string,
   input: unknown,
+  options: { onDuplicate?: "error" | "skip" } = {},
   actor = "Claude Code",
 ) {
   const metrics = z.array(metricSchema).min(1).max(5000).parse(input);
+  const onDuplicate = options.onDuplicate ?? "error";
   return transaction(() => {
     const record = getRecord(id);
     if (record.kind !== "experiment")
       throw new StoreError("Metrics belong to an experiment");
-    const keys = new Set(record.metrics.map((m) => `${m.name}:${m.step}`));
+    const stored = new Set(record.metrics.map(metricKey));
+    const batch = new Set<string>();
+    const added: Metric[] = [];
     for (const metric of metrics) {
-      const key = `${metric.name}:${metric.step}`;
-      if (keys.has(key))
+      const key = metricKey(metric);
+      if (batch.has(key))
+        throw new StoreError(`Metric ${key} appears twice in this batch.`, 409);
+      batch.add(key);
+      if (!stored.has(key)) added.push(metric);
+      else if (onDuplicate === "error")
         throw new StoreError(
           `Metric ${key} already exists. Use a new step or revise the record explicitly.`,
           409,
         );
-      keys.add(key);
     }
-    const value = recordInputSchema.parse({
-      ...record,
-      metrics: [...record.metrics, ...metrics],
-    });
+    insertMetrics(id, added);
+    const revision = record.revision + 1;
+    writePayload(
+      { ...record, revision, updatedAt: new Date().toISOString() },
+      true,
+    );
+    logMetricsActivity(record, actor);
+    return {
+      experimentId: id,
+      revision,
+      added: added.length,
+      skipped: metrics.length - added.length,
+      total: record.metrics.length + added.length,
+    };
+  });
+}
+
+/** One activity line per experiment per 10 minutes of logging, kept at the top. */
+function logMetricsActivity(record: ResearchRecord, actor: string) {
+  const since = new Date(Date.now() - 10 * 60_000).toISOString();
+  db()
+    .prepare(
+      "DELETE FROM activity WHERE action = 'logged metrics for' AND record_id = ? AND created_at >= ?",
+    )
+    .run(record.id, since);
+  log("logged metrics for", record.id, record.title, actor);
+}
+
+/** Replace an experiment's chart panels. Metrics are untouched. */
+export function setCharts(id: string, input: unknown, actor = "Claude Code") {
+  const charts = z.array(chartSpecSchema).max(24).parse(input);
+  return transaction(() => {
+    const record = getRecord(id);
+    if (record.kind !== "experiment")
+      throw new StoreError("Chart panels belong to an experiment");
     return persist(
       {
         ...record,
-        ...value,
+        charts,
         revision: record.revision + 1,
         updatedAt: new Date().toISOString(),
       },
-      "logged metrics for",
+      "arranged charts for",
       actor,
     );
   });
@@ -410,15 +593,8 @@ export function addArtifact(
   });
 }
 
-export function attachLocalFile(
-  filePath: string,
-  options: {
-    recordId?: string;
-    recordIds?: string[];
-    caption?: string;
-    actor?: string;
-  } = {},
-) {
+/** Read a file the agent points at, only from the research or Parallax folders. */
+export function readLocalFile(filePath: string) {
   const canonical = realpathSync(filePath);
   const roots = [getResearchRoot(), process.cwd()]
     .filter((p) => p && existsSync(/* turbopackIgnore: true */ p))
@@ -450,7 +626,20 @@ export function attachLocalFile(
   const stat = statSync(canonical);
   if (!stat.isFile() || stat.size > maxFileSize)
     throw new StoreError("File must be a regular file under 25 MB");
-  return addArtifact(readFileSync(canonical), path.basename(canonical), {
+  return { canonical, buffer: readFileSync(canonical) };
+}
+
+export function attachLocalFile(
+  filePath: string,
+  options: {
+    recordId?: string;
+    recordIds?: string[];
+    caption?: string;
+    actor?: string;
+  } = {},
+) {
+  const { canonical, buffer } = readLocalFile(filePath);
+  return addArtifact(buffer, path.basename(canonical), {
     ...options,
     sourcePath: canonical,
   });
@@ -513,9 +702,30 @@ export function saveSettings(input: unknown) {
   return value;
 }
 
+export function getFieldDefinitions(): FieldDefinition[] {
+  const row = db()
+    .prepare("SELECT value FROM settings WHERE key = 'fields'")
+    .get() as { value: string } | undefined;
+  return row ? fieldDefinitionsSchema.parse(JSON.parse(row.value)) : [];
+}
+/** Removing a definition keeps existing values on records; they stay searchable. */
+export function saveFieldDefinitions(input: unknown, actor = "Julien") {
+  const fields = fieldDefinitionsSchema.parse(input);
+  return transaction(() => {
+    db()
+      .prepare(
+        "INSERT INTO settings(key,value) VALUES ('fields',?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      )
+      .run(JSON.stringify(fields));
+    log("updated custom fields", null, `${fields.length} fields`, actor);
+    return fields;
+  });
+}
+
 export function getWorkspace(): Workspace {
   return {
     info: activeWorkspace(),
+    fields: getFieldDefinitions(),
     chartLinks: listChartLinks(),
     records: listRecords(),
     artifacts: listArtifacts(),
@@ -598,6 +808,13 @@ export function exportWorkspace() {
         .all() as { payload: string }[]
     ).map((r) => JSON.parse(r.payload)),
     activity: db().prepare("SELECT * FROM activity ORDER BY id").all(),
+    traceSpans: db()
+      .prepare("SELECT * FROM trace_spans ORDER BY trace_id, start_ms")
+      .all(),
+    runs: db().prepare("SELECT * FROM runs ORDER BY started_ms").all(),
+    runPoints: db()
+      .prepare("SELECT * FROM run_points ORDER BY run_id, name, step")
+      .all(),
     artifacts: listArtifacts().map((a) => ({
       ...a,
       base64: getArtifact(a.id).buffer.toString("base64"),
@@ -654,11 +871,10 @@ export function linkChart(input: unknown, actor = "Julien"): ChartLink {
       throw new StoreError(
         "This chart is already part of its source experiment",
       );
-    if (
-      source.kind !== "experiment" ||
-      !source.metrics.some((m) => m.name === value.metricName)
-    )
-      throw new StoreError("Choose a measured metric from an experiment");
+    if (source.kind !== "experiment" || !panelForLink(source, value.metricName))
+      throw new StoreError(
+        "Choose a measured metric or chart panel from an experiment",
+      );
     const existing = db()
       .prepare(
         "SELECT * FROM chart_links WHERE experimentId = ? AND metricName = ? AND recordId = ?",
