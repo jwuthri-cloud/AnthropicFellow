@@ -2,7 +2,6 @@
 import { useMemo, useRef, useState, useEffect, type ReactNode } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import Placeholder from "@tiptap/extension-placeholder";
-import DragHandle from "@tiptap/extension-drag-handle-react";
 import { TextSelection } from "@tiptap/pm/state";
 import {
   ArrowDown,
@@ -1025,11 +1024,6 @@ export function DocumentEditor({
               </aside>
             )}
             <div className="document-canvas">
-              <DragHandle editor={editor}>
-                <span className="document-drag-grip" title="Drag to move block">
-                  <GripVertical size={18} />
-                </span>
-              </DragHandle>
               <EditorContent editor={editor} />
               <button
                 type="button"
@@ -1079,7 +1073,7 @@ export function DocumentEditor({
         </span>
         <span>
           {mode === "blocks"
-            ? "Type / for blocks · drag ⋮⋮ to move"
+            ? "Type / for blocks"
             : "Plain Markdown · portable by design"}
         </span>
         <span>Saved with entry</span>

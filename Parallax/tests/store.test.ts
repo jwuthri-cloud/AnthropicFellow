@@ -92,6 +92,137 @@ test("invalid measurements and duplicate metric steps are rejected atomically", 
     /number/,
   );
 });
+const storedPayload = (id: string) =>
+  JSON.parse(
+    (
+      store
+        .db()
+        .prepare("SELECT payload FROM records WHERE id = ?")
+        .get(id) as {
+        payload: string;
+      }
+    ).payload,
+  );
+test("metrics live in their own table: appends copy no revision, re-sent points can be skipped", () => {
+  const run = store.createRecord({
+    kind: "experiment",
+    title: "Fixture: telemetry",
+    metrics: [{ name: "fixture_only/a", step: 0, value: 1 }],
+  });
+  const revisions = store.getRevisions(run.id).length;
+  const first = store.appendMetrics(run.id, [
+    { name: "fixture_only/a", step: 1, value: 0.9 },
+    { name: "fixture_only/b", step: 1, value: 2 },
+  ]);
+  assert.deepEqual([first.added, first.skipped, first.total], [2, 0, 3]);
+  assert.equal(first.revision, 2);
+  assert.equal(store.getRevisions(run.id).length, revisions);
+  const again = store.appendMetrics(
+    run.id,
+    [
+      { name: "fixture_only/a", step: 1, value: 0.8 },
+      { name: "fixture_only/a", step: 2, value: 0.7 },
+    ],
+    { onDuplicate: "skip" },
+  );
+  assert.deepEqual([again.added, again.skipped, again.total], [1, 1, 4]);
+  assert.equal(
+    store
+      .getRecord(run.id)
+      .metrics.find((m) => m.name === "fixture_only/a" && m.step === 1)?.value,
+    0.9,
+  );
+  assert.throws(
+    () =>
+      store.appendMetrics(
+        run.id,
+        [
+          { name: "fixture_only/c", step: 0, value: 1 },
+          { name: "fixture_only/c", step: 0, value: 2 },
+        ],
+        { onDuplicate: "skip" },
+      ),
+    /twice/,
+  );
+  assert.deepEqual(storedPayload(run.id).metrics, []);
+  assert.equal(
+    store
+      .getWorkspace()
+      .activity.filter(
+        (a) => a.recordId === run.id && a.action === "logged metrics for",
+      ).length,
+    1,
+  );
+  // An edit from an older read is refused; an edit without `metrics` keeps the points.
+  assert.throws(
+    () => store.updateRecord(run.id, { kind: "experiment", title: "stale" }, 1),
+    /changed elsewhere/,
+  );
+  const kept = store.updateRecord(
+    run.id,
+    { kind: "experiment", title: "Fixture: telemetry renamed" },
+    again.revision,
+  );
+  assert.equal(kept.metrics.length, 4);
+  assert.equal(store.getRecord(run.id).metrics.length, 4);
+  // The app's editor sends `metrics`: they replace the stored points.
+  const replaced = store.updateRecord(
+    run.id,
+    {
+      kind: "experiment",
+      title: kept.title,
+      metrics: [{ name: "fixture_only/a", step: 0, value: 1 }],
+    },
+    kept.revision,
+  );
+  assert.equal(store.getRecord(run.id).metrics.length, 1);
+  store.deleteRecord(run.id, replaced.revision);
+  assert.equal(
+    (
+      store
+        .db()
+        .prepare("SELECT count(*) AS n FROM metric_points WHERE record_id = ?")
+        .get(run.id) as { n: number }
+    ).n,
+    0,
+  );
+});
+test("points stored inline by older versions are read, and move to the table on the next write", () => {
+  const run = store.createRecord({
+    kind: "experiment",
+    title: "Fixture: legacy",
+  });
+  const legacy = {
+    ...storedPayload(run.id),
+    metrics: [{ name: "fixture_only", step: 0, value: 0.5, unit: "" }],
+  };
+  store
+    .db()
+    .prepare("UPDATE records SET payload = ? WHERE id = ?")
+    .run(JSON.stringify(legacy), run.id);
+  assert.equal(store.getRecord(run.id).metrics.length, 1);
+  assert.equal(
+    store.listRecords("", "experiment").find((r) => r.id === run.id)?.metrics
+      .length,
+    1,
+  );
+  assert.throws(
+    () =>
+      store.appendMetrics(run.id, [
+        { name: "fixture_only", step: 0, value: 0.6 },
+      ]),
+    /already exists/,
+  );
+  store.appendMetrics(run.id, [{ name: "fixture_only", step: 1, value: 0.4 }]);
+  assert.deepEqual(storedPayload(run.id).metrics, []);
+  assert.deepEqual(
+    store.getRecord(run.id).metrics.map((m) => [m.step, m.value]),
+    [
+      [0, 0.5],
+      [1, 0.4],
+    ],
+  );
+});
 test("artifact bytes and SHA-256 survive round-trip; unsupported files stay out", () => {
   const bytes = Buffer.from("step,value\n0,0.5\n");
   const artifact = store.addArtifact(bytes, "../../fixture.csv");
@@ -269,7 +400,9 @@ test("deleting a record removes its links, keeps history, and spares journals", 
   assert.deepEqual(store.getArtifact(file.id).artifact.recordIds, [note.id]);
   assert.ok(!store.listRelations().some((e) => e.target === paper.id));
   assert.ok(
-    store.exportWorkspace().revisions.some((r: { id: string }) => r.id === paper.id),
+    store
+      .exportWorkspace()
+      .revisions.some((r: { id: string }) => r.id === paper.id),
   );
   store.updateRecord(note.id, store.getRecord(note.id), 2);
 

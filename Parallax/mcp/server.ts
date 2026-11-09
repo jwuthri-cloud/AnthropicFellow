@@ -10,7 +10,17 @@ const home = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.chdir(home);
 const store = await import("../lib/store.js");
 const spaces = await import("../lib/workspaces.js");
-const { recordInputSchema, metricSchema, kinds } =
+const {
+  recordInputSchema,
+  metricSchema,
+  chartSpecSchema,
+  fieldDefinitionSchema,
+  fieldValueSchema,
+  kinds,
+} = await import("../lib/schema.js");
+const kit = await import("../lib/artifact-kit.js");
+const traces = await import("../lib/traces.js");
+const { spanInputSchema, traceInputSchema, traceQuerySchema } =
   await import("../lib/schema.js");
 const { initializeWorkspace, importRepository } =
   await import("../lib/importer.js");
@@ -66,15 +76,16 @@ server.registerTool(
   "search_research",
   {
     description:
-      "Search private research by title, tags, full text and provenance. Omit query to list all. Imported claims are not verified.",
+      "Search private research by title, tags, full text, provenance and custom field values. Omit query to list all. fields filters by exact custom field values. Imported claims are not verified.",
     inputSchema: {
       workspaceId,
       query: z.string().default(""),
       kind: z.enum(kinds).optional(),
+      fields: z.record(z.string(), fieldValueSchema).optional(),
     },
   },
-  ({ workspaceId, query, kind }) =>
-    result(() => store.listRecords(query, kind), workspaceId),
+  ({ workspaceId, query, kind, fields }) =>
+    result(() => store.listRecords(query, kind, fields), workspaceId),
 );
 server.registerTool(
   "get_record",
@@ -112,12 +123,12 @@ server.registerTool(
   "update_record",
   {
     description:
-      "Replace a record with revision history. Read first and supply its revision to prevent stale edits. Journals are immutable; add a linked correction.",
+      "Replace a record with revision history. Read first and supply its revision to prevent stale edits. Journals are immutable; add a linked correction. An experiment's measured metrics are kept: add points with log_metrics (editing or removing points is done in the app).",
     inputSchema: {
       workspaceId,
       id: z.string().uuid(),
       revision: z.number().int().positive(),
-      record: recordInputSchema,
+      record: recordInputSchema.omit({ metrics: true }),
     },
   },
   ({ workspaceId, id, revision, record }) =>
@@ -130,15 +141,67 @@ server.registerTool(
   "log_metrics",
   {
     description:
-      "Append measured metrics to an experiment. Include real sample sizes and bounds when available. Duplicate name+step pairs are rejected. Never log illustrative values as measured results.",
+      'Append measured metrics to an experiment. Name related series "group/series" (loss/train, loss/val, accuracy/eval) and they share one chart; arrange panels with set_charts. Use unit "%" only for values already in percent. Include real sample sizes (n) and bounds (lower/upper) when available. A name+step that is already stored is rejected, or skipped with onDuplicate "skip" (for re-sent telemetry). Returns counts, not the record. Never log illustrative values as measured results.',
     inputSchema: {
       workspaceId,
       experimentId: z.string().uuid(),
       metrics: z.array(metricSchema).min(1).max(5000),
+      onDuplicate: z.enum(["error", "skip"]).default("error"),
     },
   },
-  ({ workspaceId, experimentId, metrics }) =>
-    result(() => store.appendMetrics(experimentId, metrics), workspaceId),
+  ({ workspaceId, experimentId, metrics, onDuplicate }) =>
+    result(
+      () => store.appendMetrics(experimentId, metrics, { onDuplicate }),
+      workspaceId,
+    ),
+);
+server.registerTool(
+  "set_charts",
+  {
+    description:
+      "Arrange an experiment's charts: titled panels that plot chosen metrics together (patterns like \"loss/*\" match a group), as line, bar or scatter, with axis labels, value format, log scale, smoothing and a min/max goal that highlights the best value. Replaces the experiment's panel list; metrics are unchanged. Metrics not in any panel still appear in automatic panels. Panels may be set before metrics are logged.",
+    inputSchema: {
+      workspaceId,
+      experimentId: z.string().uuid(),
+      charts: z.array(chartSpecSchema).max(24),
+    },
+  },
+  ({ workspaceId, experimentId, charts }) =>
+    result(() => store.setCharts(experimentId, charts), workspaceId),
+);
+server.registerTool(
+  "list_fields",
+  {
+    description:
+      "List this workspace's custom fields: key, label, type, options and which entry kinds use them.",
+    inputSchema: { workspaceId },
+  },
+  ({ workspaceId }) => result(store.getFieldDefinitions, workspaceId),
+);
+server.registerTool(
+  "define_fields",
+  {
+    description:
+      'Replace the workspace\'s custom field definitions (call list_fields first and include the ones to keep). Types: text, number, select (with options), boolean. Records then carry values in record.fields, validated on save, e.g. { judge_model: "opus", pressure_level: 3 }. Removing a definition keeps stored values.',
+    inputSchema: {
+      workspaceId,
+      fields: z.array(fieldDefinitionSchema).max(40),
+    },
+  },
+  ({ workspaceId, fields }) =>
+    result(
+      () => store.saveFieldDefinitions(fields, "Claude Code"),
+      workspaceId,
+    ),
+);
+server.registerTool(
+  "get_artifact_kit",
+  {
+    description:
+      "Get the Parallax report kit: how to write a self-contained HTML report (attach_file it) that uses the app's fonts, theme, components and interactive charts, including charts bound live to an experiment's metrics. Returns the class and chart reference plus a starter template.",
+    inputSchema: {},
+  },
+  () => result(() => ({ guide: kit.kitGuide, template: kit.kitTemplate })),
 );
 server.registerTool(
   "attach_file",
@@ -212,6 +275,225 @@ server.registerTool(
   },
   ({ workspaceId, id }) =>
     result(() => store.unlinkChart(id, "Claude Code"), workspaceId),
+);
+server.registerTool(
+  "log_trace",
+  {
+    description:
+      "Record one LLM trace: a tree of spans (agent steps, model calls, tool calls). Spans link by parentSpanId. A span sent again with the same traceId and spanId replaces the stored one. input/output take text or JSON such as a chat message list [{role, content, tool_calls}]. Give costUsd only when the provider reported it. Use sessionId to group the turns of one conversation and experimentId to tie the trace to an experiment. Shown in the app under Traces.",
+    inputSchema: {
+      workspaceId,
+      ...traceInputSchema.shape,
+      spans: z.array(spanInputSchema).min(1).max(2000),
+    },
+  },
+  ({ workspaceId, ...trace }) =>
+    result(() => traces.ingestTrace(trace, "Claude Code"), workspaceId),
+);
+server.registerTool(
+  "import_traces",
+  {
+    description:
+      "Import traces from a file in this workspace's research repository (max 25 MB): JSON Lines where each line is a trace ({traceId, sessionId?, experimentId?, spans}) or a single span with traceId, or an OTLP/JSON export ({resourceSpans}). Copy result files back from the cluster first. Returns how many traces and spans were stored and which lines were rejected.",
+    inputSchema: { workspaceId, path: z.string() },
+  },
+  ({ workspaceId, path: filePath }) =>
+    result(
+      () =>
+        traces.importTraceText(
+          store.readLocalFile(filePath).buffer.toString("utf8"),
+          "Claude Code",
+        ),
+      workspaceId,
+    ),
+);
+server.registerTool(
+  "list_traces",
+  {
+    description:
+      "List traces, newest first: name, time, duration, span count, tokens, reported cost, models, failing flag, session and experiment, with input and answer previews. Filter by text (q), status, model, experimentId, sessionId and time (from/to in epoch ms). Page with limit/offset.",
+    inputSchema: {
+      workspaceId,
+      ...traceQuerySchema.omit({ multi: true }).shape,
+    },
+  },
+  ({ workspaceId, ...query }) =>
+    result(() => traces.listTraces(query), workspaceId),
+);
+const clipText = (text: string | null, max: number) =>
+  text !== null && text.length > max
+    ? `${text.slice(0, max)}…[${text.length - max} more characters; pass full: true]`
+    : text;
+server.registerTool(
+  "get_trace",
+  {
+    description:
+      "Read one trace with all its spans in start order. Span input and output are cut to 4,000 characters unless full is true.",
+    inputSchema: {
+      workspaceId,
+      traceId: z.string(),
+      full: z.boolean().default(false),
+    },
+  },
+  ({ workspaceId, traceId, full }) =>
+    result(() => {
+      const trace = traces.getTrace(traceId);
+      if (full) return trace;
+      return {
+        ...trace,
+        spanList: trace.spanList.map((s) => ({
+          ...s,
+          input: clipText(s.input, 4000),
+          output: clipText(s.output, 4000),
+        })),
+      };
+    }, workspaceId),
+);
+server.registerTool(
+  "list_trace_sessions",
+  {
+    description:
+      "List conversations: traces grouped by sessionId (a trace without one is its own session), with turn count, totals, the first question and the latest answer. multi: true keeps only multi-turn sessions. Read one session's traces with list_traces({sessionId}).",
+    inputSchema: { workspaceId, ...traceQuerySchema.shape },
+  },
+  ({ workspaceId, ...query }) =>
+    result(() => traces.listSessions(query), workspaceId),
+);
+const runs = await import("../lib/runs.js");
+const { runEventSchema, runPatchSchema, runQuerySchema } =
+  await import("../lib/schema.js");
+const { differingKeys, flatten } = await import("../lib/run-dashboard.js");
+server.registerTool(
+  "log_run_events",
+  {
+    description:
+      'Send run telemetry (W&B-style live training runs, shown under Runs). Events apply in order: start (name, group, tags, config, meta, experimentId; a start on a known run resumes it), log (step + values {"loss/train": 1.2}; null records NaN/Inf), config and summary (merged), heartbeat, finish (status finished/failed/killed). A point sent again for the same run, metric and step replaces the stored one. Training code should use clients/python/parallax_track.py instead; use this tool for numbers read from real result files, never illustrative values.',
+    inputSchema: {
+      workspaceId,
+      events: z.array(runEventSchema).min(1).max(5000),
+    },
+  },
+  ({ workspaceId, events }) =>
+    result(() => runs.applyRunEvents(events, "Claude Code"), workspaceId),
+);
+server.registerTool(
+  "import_run_file",
+  {
+    description:
+      "Import a run event log (.jsonl, one event per line, as written by parallax_track in offline mode or on the cluster) from this workspace's research repository. Safe to repeat: points are replaced, not duplicated. Copy the file back from the cluster first. Returns runs, event and point counts, and rejected lines.",
+    inputSchema: { workspaceId, path: z.string() },
+  },
+  ({ workspaceId, path: filePath }) =>
+    result(
+      () =>
+        runs.importRunText(
+          store.readLocalFile(filePath).buffer.toString("utf8"),
+          "Claude Code",
+        ),
+      workspaceId,
+    ),
+);
+server.registerTool(
+  "list_runs",
+  {
+    description:
+      'List telemetry runs, most recently active first: status (running, finished, failed, killed, or stalled = running but silent for 5 minutes), runtime, last step and a summary (last value of each training metric, overridden by explicit summary values). Filter by text, status, group or experimentId. Runs with ids "demo-…" and the tag "demo" are synthetic demo data, never results.',
+    inputSchema: { workspaceId, ...runQuerySchema.shape },
+  },
+  ({ workspaceId, ...query }) =>
+    result(() => runs.listRuns(query), workspaceId),
+);
+server.registerTool(
+  "get_run",
+  {
+    description:
+      "Read one run: config, meta (host, git commit, command, GPUs), status, and per-metric stats (count, last step, last, min, max, NaN/Inf count and first bad step). Pass metrics to also get those series, downsampled to maxPoints (bucket mean with min/max).",
+    inputSchema: {
+      workspaceId,
+      runId: z.string(),
+      metrics: z.array(z.string()).max(50).optional(),
+      maxPoints: z.number().int().min(10).max(2000).default(200),
+    },
+  },
+  ({ workspaceId, runId, metrics, maxPoints }) =>
+    result(
+      () => ({
+        ...runs.getRun(runId),
+        ...(metrics?.length
+          ? {
+              series: runs.runSeries({
+                runs: [runId],
+                names: metrics,
+                maxPoints,
+              }),
+            }
+          : {}),
+      }),
+      workspaceId,
+    ),
+);
+server.registerTool(
+  "compare_runs",
+  {
+    description:
+      "Compare runs side by side: the config keys that differ, and for each metric (all non-system metrics by default) each run's last, min and max values and step.",
+    inputSchema: {
+      workspaceId,
+      runIds: z.array(z.string()).min(2).max(20),
+      metrics: z.array(z.string()).max(100).optional(),
+    },
+  },
+  ({ workspaceId, runIds, metrics }) =>
+    result(() => {
+      const details = runIds.map((id) => runs.getRun(id));
+      const keys = differingKeys(details.map((d) => d.config));
+      const names =
+        metrics ??
+        [
+          ...new Set(details.flatMap((d) => d.metrics.map((m) => m.name))),
+        ].filter((n) => !n.startsWith("system/"));
+      return {
+        runs: details.map((d) => ({
+          id: d.id,
+          name: d.name,
+          status: d.status,
+          runtimeMs: d.runtimeMs,
+          config: Object.fromEntries(
+            keys.map((k) => [k, flatten(d.config)[k] ?? null]),
+          ),
+        })),
+        metrics: names.map((name) => ({
+          name,
+          runs: Object.fromEntries(
+            details.map((d) => {
+              const m = d.metrics.find((x) => x.name === name);
+              return [
+                d.id,
+                m
+                  ? {
+                      last: m.last,
+                      min: m.min,
+                      max: m.max,
+                      lastStep: m.lastStep,
+                      nonFinite: m.nonFinite,
+                    }
+                  : null,
+              ];
+            }),
+          ),
+        })),
+      };
+    }, workspaceId),
+);
+server.registerTool(
+  "update_run",
+  {
+    description:
+      'Rename a run or change its group, tags, notes or linked experiment (experimentId "" unlinks). Metrics and config are unchanged.',
+    inputSchema: { workspaceId, runId: z.string(), ...runPatchSchema.shape },
+  },
+  ({ workspaceId, runId, ...patch }) =>
+    result(() => runs.updateRun(runId, patch, "Claude Code"), workspaceId),
 );
 server.registerTool(
   "import_repository",

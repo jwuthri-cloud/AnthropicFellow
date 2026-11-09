@@ -14,7 +14,7 @@
   --blue: #94b4d5;
   --orange: #dfa383;
   --pink: #dca4c1;
-  --font: "Manrope Variable", sans-serif;
+  --font: "Manrope", sans-serif;
   --mono: "IBM Plex Mono", monospace;
   color-scheme: dark;
 }
@@ -2810,38 +2810,6 @@ th {
   background: var(--paint-bg, #17220f);
   padding: 5px 10px;
 }
-.metrics-chart {
-  border: 1px solid var(--paint-border, #3a5328);
-  background: var(--paint-bg, #17220f);
-  border-radius: 6px;
-  padding: 17px;
-  margin: 23px 0;
-}
-.chart-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-.chart-heading .parallax-select {
-  font-size: 10px;
-  padding: 7px 10px;
-}
-.metrics-chart > svg {
-  width: 100%;
-  height: auto;
-  margin-top: 8px;
-}
-.metrics-chart details > summary {
-  font-size: 9px;
-  color: var(--paint-muted, #7c9d62);
-  cursor: pointer;
-}
-.metrics-chart table {
-  color: var(--paint-soft, #a5bf8d);
-  font-family: var(--mono);
-  margin-bottom: 0;
-}
 .attached-section {
   margin-top: 35px;
   border-top: 1px solid var(--paint-border, #3c532d);
@@ -4813,7 +4781,7 @@ th {
   color: var(--dim);
   font-size: 11px;
 }
-.linked-chart .metrics-chart {
+.linked-chart .metrics-panel {
   margin-top: 12px;
 }
 .chart-heading {
@@ -4874,4 +4842,138 @@ th {
   .link-picker-list > label > span:last-child {
     min-width: 120px;
   }
+}
+
+/* Experiment charts: drawn by lib/kit/parallax-kit.js (styles in lib/kit/chart.css). */
+.chart-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.metrics-board {
+  margin: 23px 0;
+}
+.chart-heading small {
+  margin-left: auto;
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+.metrics-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+}
+.metrics-grid.two {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+}
+.metrics-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--px-border);
+  border-radius: 8px;
+  background: var(--px-surface);
+}
+.metrics-panel > .button {
+  align-self: flex-start;
+}
+.kit-chart {
+  min-width: 0;
+}
+
+/* Custom fields */
+.custom-fields {
+  margin-top: 4px;
+}
+.custom-fields small {
+  color: var(--dim);
+}
+.field-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+.field-summary > div {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 5px 10px;
+  border: 1px solid var(--paint-border, #36482a);
+  border-radius: 6px;
+}
+.field-summary dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+.field-summary dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+.field-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0 8px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--paint-border, #36482a);
+  border-radius: 8px;
+}
+.field-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.field-row .wide {
+  grid-column: span 2;
+}
+.field-kinds {
+  grid-column: 1 / -2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.field-kinds legend {
+  width: 100%;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.field-kinds .checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  font-size: 12px;
+}
+.field-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.field-settings,
+.report-kit-card {
+  grid-column: 1 / -1;
+}
+.kit-guide {
+  margin-top: 16px;
+}
+.kit-guide summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.kit-guide pre {
+  white-space: pre-wrap;
 }

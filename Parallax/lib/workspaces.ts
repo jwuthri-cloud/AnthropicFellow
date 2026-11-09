@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, chmodSync, realpathSync, statSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
 import type { WorkspaceInfo } from "./schema";
@@ -16,11 +17,10 @@ export const researchRoot = path.resolve(
 );
 
 export class StoreError extends Error {
-  constructor(
-    message: string,
-    public status = 400,
-  ) {
+  status: number;
+  constructor(message: string, status = 400) {
     super(message);
+    this.status = status;
   }
 }
 
@@ -58,9 +58,21 @@ export function listWorkspaces(): WorkspaceInfo[] {
   ).map((row) => JSON.parse(row.payload));
 }
 
+/** Synthetic demo data lives here: never in the catalog, never in the data folder. */
+export const demoWorkspaceId = "demo";
+const demoDataDir = path.join(os.tmpdir(), `parallax-demo-${process.pid}`);
+const demoWorkspace: WorkspaceInfo = {
+  id: demoWorkspaceId,
+  name: "Demo traces",
+  description: "Synthetic traces in a temporary folder",
+  researchRoot: demoDataDir,
+  createdAt: new Date().toISOString(),
+};
+
 export function getWorkspaceInfo(
   id = process.env.PARALLAX_WORKSPACE_ID || "default",
 ): WorkspaceInfo {
+  if (id === demoWorkspaceId) return demoWorkspace;
   const row = registry()
     .prepare("SELECT payload FROM workspaces WHERE id = ?")
     .get(id) as { payload: string } | undefined;
@@ -73,6 +85,7 @@ export function activeWorkspace() {
 }
 export function workspaceDataDir() {
   const { id } = activeWorkspace();
+  if (id === demoWorkspaceId) return demoDataDir;
   return id === "default" ? dataDir : path.join(dataDir, "workspaces", id);
 }
 export function getResearchRoot() {

@@ -1,6 +1,21 @@
 /* Legacy colors retain their exact Moss values; other atmospheres use semantic tokens. */
 :root {
   --accent-ink: #17200f;
+  /* Chart tokens for lib/kit; series slots are validated for CVD and contrast. */
+  --px-surface: var(--paint-bg, #17220f);
+  --px-raised: var(--surface2);
+  --px-border: var(--paint-border, #3a5328);
+  --px-grid: var(--border);
+  --px-text: var(--text);
+  --px-muted: var(--muted);
+  --px-series-1: #3987e5;
+  --px-series-2: #d95926;
+  --px-series-3: #199e70;
+  --px-series-4: #c98500;
+  --px-series-5: #d55181;
+  --px-series-6: #008300;
+  --px-series-7: #9085e9;
+  --px-series-8: #e66767;
 }
 :root[data-theme="glacier"] {
   --bg: #0d1720;
@@ -56,6 +71,14 @@
   --orange: #95613d;
   --pink: #96627e;
   --accent-ink: #f7f7ec;
+  --px-series-1: #2a78d6;
+  --px-series-2: #eb6834;
+  --px-series-3: #1baf7a;
+  --px-series-4: #eda100;
+  --px-series-5: #e87ba4;
+  --px-series-6: #008300;
+  --px-series-7: #6250d6;
+  --px-series-8: #e34948;
 }
 :root:is([data-theme="glacier"], [data-theme="iris"], [data-theme="paper"]) {
   --paint-accent: var(--lime);

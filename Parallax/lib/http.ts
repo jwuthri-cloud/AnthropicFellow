@@ -69,9 +69,20 @@ export function errorResponse(error: unknown) {
     { status: 500 },
   );
 }
-export async function jsonBody(request: NextRequest) {
+export async function jsonBody(
+  request: NextRequest,
+  maxBytes = 2 * 1024 * 1024,
+) {
   const raw = await request.text();
-  if (Buffer.byteLength(raw) > 2 * 1024 * 1024)
+  if (Buffer.byteLength(raw) > maxBytes)
     throw new StoreError("Request is too large", 413);
   return JSON.parse(raw);
+}
+/** URL search parameters as a plain object, without the workspace and empty values. */
+export function queryParams(request: NextRequest) {
+  return Object.fromEntries(
+    [...request.nextUrl.searchParams].filter(
+      ([key, value]) => key !== "workspaceId" && value !== "",
+    ),
+  );
 }
